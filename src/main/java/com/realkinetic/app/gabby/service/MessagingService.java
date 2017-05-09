@@ -9,4 +9,5 @@ public interface MessagingService {
     void deleteSubscription(String subscriptionName) throws IOException;
     Iterable<MessageResponse> pull(String subscriptionName) throws IOException;
     void acknowledge(String subscriptionName, Iterable<String> ackIds) throws IOException;
+    void send(String topic, String message) throws IOException;
 }

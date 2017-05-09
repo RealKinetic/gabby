@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Pubsub</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/metisMenu.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/sb-admin-2.min.css}" />
+</head>
+<body>
+
+<div id="wrapper" style="min-height: 107px;">
+    <div class="row" style="min-height: 20px;">
+        <div class="col-md-12">
+            <h1>Pubsub Tests</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <form role="form" onsubmit="return false;">
+                <div class="form-group">
+                    <button id="btnSubscribe" type="submit" class="btn btn-default">Subscribe</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <form role="form" onsubmit="return false;">
+                <div class="form-group">
+                    <label>Subscription ID</label>
+                    <input id="txtSubscriptionId" class="form-control" placeholder="id" />
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <input id="txtMessage" class="form-control" placeholder="send message" />
+                </div>
+                <div class="form-group">
+                    <button id="btnPull" type="submit" class="btn btn-default">Start Pulling</button>
+                    <button id="btnSend" type="submit" class="btn btn-default">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row" id="messages">
+        <ol id="olMessages"></ol>
+    </div>
+</div>
+
+<script type="text/javascript" th:src="@{/js/jquery.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/bootstrap.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/metisMenu.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/sb-admin-2.min.js}"></script>
+<script type="text/javascript">
+    var pulling = null;
+    var topic = "oncenter";
+
+    function subscribe() {
+        console.log('subscribing');
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions",
+            data: JSON.stringify({ "name": topic }),
+            contentType: "application/json"
+        }).done(function(msg) {
+            console.log("subscription " + msg);
+            $("#txtSubscriptionId").val(msg);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('subscribe failed');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    function startPulling(subscriptionId) {
+        if (pulling) {
+            pulling.abort();
+        }
+        $("#btnPull").text("Stop Pulling");
+        pulling = $.ajax({
+            method: "GET",
+            url: "/subscriptions/" + subscriptionId + "/messages"
+        }).done(function(msg) {
+            var ackIds = [];
+            msg.forEach(function(item, index, array) {
+                $("#messages").prepend("<li>" + item.message + "</li>");
+                ackIds.push(item.ackId);
+            });
+
+            acknowledge(subscriptionId, ackIds);
+            startPulling(subscriptionId);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail polling');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+            $("#btnPull").text("Start Pulling");
+        });
+    }
+
+    function acknowledge(subscriptionId, ackIds) {
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions/" + subscriptionId + "/ack",
+            data: JSON.stringify({"ackIds": ackIds}),
+            contentType: "application/json",
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail acknowledging');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    function stopPulling() {
+        if (pulling) {
+            pulling.abort();
+            pulling = null;
+            $("#btnPull").text("Start Pulling");
+        }
+    }
+
+    function sendMessage(msg) {
+        $.ajax({
+            method: "POST",
+            url: "/topics/" + topic + "/messages",
+            contentType: "application/json",
+            data: JSON.stringify({"message": msg})
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail sending');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    $( document ).ready(function() {
+        $("#btnSubscribe").click(function() {
+            subscribe();
+        });
+
+        $("#btnSend").click(function() {
+            sendMessage($("#txtMessage").val());
+            $("#txtMessage").val('');
+        });
+
+        $("#btnPull").click(function() {
+            if (pulling) {
+                stopPulling();
+            } else {
+                startPulling($("#txtSubscriptionId").val());
+            }
+        });
+    });
+</script>
+</body>
+</html>

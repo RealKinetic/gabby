@@ -7,6 +7,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.services.pubsub.Pubsub;
 import com.google.api.services.pubsub.model.*;
+import com.google.common.collect.ImmutableList;
 import com.realkinetic.app.gabby.model.MessageResponse;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class GooglePubSubMessagingService implements MessagingService {
 
     public GooglePubSubMessagingService() throws IOException {
         this(
-                GoogleCredential.getApplicationDefault(),
+                new RetryHttpInitializerWrapper(GoogleCredential.getApplicationDefault()),
                 Utils.getDefaultTransport(),
                 Utils.getDefaultJsonFactory()
         );
@@ -118,6 +119,20 @@ public class GooglePubSubMessagingService implements MessagingService {
         this.pubsub.projects()
                 .subscriptions()
                 .acknowledge(subscriptionName, acknowledgeRequest)
+                .execute();
+    }
+
+    @Override
+    public void send(String topic, String message) throws IOException {
+        topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, topic);
+        PubsubMessage pubsubMessage = new PubsubMessage()
+                .encodeData(message.getBytes("UTF-8"));
+        List<PubsubMessage> messages = ImmutableList.of(pubsubMessage);
+        PublishRequest publishRequest = new PublishRequest();
+        publishRequest.setMessages(messages);
+        PublishResponse publishResponse = this.pubsub.projects()
+                .topics()
+                .publish(topic, publishRequest)
                 .execute();
     }
 
