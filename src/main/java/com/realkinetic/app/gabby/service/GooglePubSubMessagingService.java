@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 import static com.google.common.collect.Lists.newArrayList;
 
-@Service
+//@Service
 public class GooglePubSubMessagingService implements MessagingService {
     private static final Logger log = Logger.getLogger(GooglePubSubMessagingService.class.getName());
     private static final String APP_NAME = "gabby";
