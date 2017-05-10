@@ -9,14 +9,12 @@ import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Key;
 import com.realkinetic.app.gabby.model.MessageResponse;
-import org.springframework.stereotype.Service;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-//@Service
 public class FirebaseMessagingService implements MessagingService {
     private static String SERVER_KEY = "AAAAXbExgaY:APA91bE_kqbVngqsLi7sdT3M36oypgdBz4ob7n5yLxTTX8D89rPMK0Rhyez97Q7YjNGd_yMXg3FcXN6ggEOsOfTKawiuuSX0LtnXwZ_nmXnWLOYhvBliYkDZQb2t6pts7hrAm3qEPLxT";
 

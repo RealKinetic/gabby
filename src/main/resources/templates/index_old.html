@@ -6,7 +6,6 @@
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}" />
     <link rel="stylesheet" th:href="@{/css/metisMenu.min.css}" />
     <link rel="stylesheet" th:href="@{/css/sb-admin-2.min.css}" />
-    <link rel="manifest" th:href="@{/manifest.json}">
 </head>
 <body>
 
@@ -50,31 +49,75 @@
 <script type="text/javascript" th:src="@{/js/bootstrap.min.js}"></script>
 <script type="text/javascript" th:src="@{/js/metisMenu.min.js}"></script>
 <script type="text/javascript" th:src="@{/js/sb-admin-2.min.js}"></script>
-
-<script src="https://www.gstatic.com/firebasejs/3.9.0/firebase.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.9.0/firebase-messaging.js"></script>
-<script>
-  // Initialize Firebase
-  var config = {
-    apiKey: "AIzaSyD18SudnNqLMhglmNVILa91zvVDYZ8MVkk",
-    authDomain: "rk-playground.firebaseapp.com",
-    databaseURL: "https://rk-playground.firebaseio.com",
-    projectId: "rk-playground",
-    storageBucket: "rk-playground.appspot.com",
-    messagingSenderId: "402404770214"
-  };
-  firebase.initializeApp(config);
-</script>
 <script type="text/javascript">
     var pulling = null;
     var topic = "oncenter";
 
-    const messaging = firebase.messaging();
+    function subscribe() {
+        console.log('subscribing');
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions",
+            data: JSON.stringify({ "name": topic }),
+            contentType: "application/json"
+        }).done(function(msg) {
+            console.log("subscription " + msg);
+            $("#txtSubscriptionId").val(msg);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('subscribe failed');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
 
-    messaging.onMessage(function(payload) {
-        console.log("Message received. ", payload);
-        // ...
-    });
+    function startPulling(subscriptionId) {
+        if (pulling) {
+            pulling.abort();
+        }
+        $("#btnPull").text("Stop Pulling");
+        pulling = $.ajax({
+            method: "GET",
+            url: "/subscriptions/" + subscriptionId + "/messages"
+        }).done(function(msg) {
+            var ackIds = [];
+            msg.forEach(function(item, index, array) {
+                $("#messages").prepend("<li>" + item.message + "</li>");
+                ackIds.push(item.ackId);
+            });
+
+            acknowledge(subscriptionId, ackIds);
+            startPulling(subscriptionId);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail polling');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+            $("#btnPull").text("Start Pulling");
+        });
+    }
+
+    function acknowledge(subscriptionId, ackIds) {
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions/" + subscriptionId + "/ack",
+            data: JSON.stringify({"ackIds": ackIds}),
+            contentType: "application/json",
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail acknowledging');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    function stopPulling() {
+        if (pulling) {
+            pulling.abort();
+            pulling = null;
+            $("#btnPull").text("Start Pulling");
+        }
+    }
 
     function sendMessage(msg) {
         $.ajax({
@@ -107,16 +150,6 @@
                 startPulling($("#txtSubscriptionId").val());
             }
         });
-
-        messaging.requestPermission()
-            .then(function() {
-                console.log('Notification permission granted.');
-                // TODO(developer): Retrieve an Instance ID token for use with FCM.
-
-            })
-            .catch(function(err) {
-                console.log('Unable to get permission to notify.', err);
-            });
     });
 </script>
 </body>

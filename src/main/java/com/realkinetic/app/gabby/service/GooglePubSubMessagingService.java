@@ -9,7 +9,6 @@ import com.google.api.services.pubsub.Pubsub;
 import com.google.api.services.pubsub.model.*;
 import com.google.common.collect.ImmutableList;
 import com.realkinetic.app.gabby.model.MessageResponse;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +19,6 @@ import java.util.logging.Logger;
 
 import static com.google.common.collect.Lists.newArrayList;
 
-//@Service
 public class GooglePubSubMessagingService implements MessagingService {
     private static final Logger log = Logger.getLogger(GooglePubSubMessagingService.class.getName());
     private static final String APP_NAME = "gabby";
