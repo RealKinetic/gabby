@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Pubsub</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/metisMenu.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/sb-admin-2.min.css}" />
+    <link rel="manifest" th:href="@{/manifest.json}" />
+</head>
+<body>
+
+<div id="wrapper" style="min-height: 107px;">
+    <div class="row" style="min-height: 20px;">
+        <div class="col-md-12">
+            <h1>Pubsub Tests</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <form role="form" onsubmit="return false;">
+                <div class="form-group">
+                    <button id="btnSubscribe" type="submit" class="btn btn-default">Subscribe</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <form role="form" onsubmit="return false;">
+                <div class="form-group">
+                    <label>Subscription ID</label>
+                    <input id="txtSubscriptionId" class="form-control" placeholder="id" />
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <input id="txtMessage" class="form-control" placeholder="send message" />
+                </div>
+                <div class="form-group">
+                    <button id="btnSend" type="submit" class="btn btn-default">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row" id="messages">
+        <ol id="olMessages"></ol>
+    </div>
+</div>
+<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
+
+<script type="text/javascript" th:src="@{/js/jquery.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/bootstrap.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/metisMenu.min.js}"></script>
+<script type="text/javascript" th:src="@{/js/sb-admin-2.min.js}"></script>
+
+<script src="https://www.gstatic.com/firebasejs/3.9.0/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyD18SudnNqLMhglmNVILa91zvVDYZ8MVkk",
+    authDomain: "rk-playground.firebaseapp.com",
+    databaseURL: "https://rk-playground.firebaseio.com",
+    projectId: "rk-playground",
+    storageBucket: "rk-playground.appspot.com",
+    messagingSenderId: "402404770214"
+  };
+  firebase.initializeApp(config);
+</script>
+<script type="text/javascript">
+    var pulling = null;
+    var topic = "oncenter";
+
+    const messaging = firebase.messaging();
+
+    messaging.onMessage(function(payload) {
+        console.log("Message received. ", payload);
+        appendMessage(payload.data.message);
+    });
+
+    function appendMessage(message) {
+        $("#messages").prepend("<li>" + message + "</li>");
+    }
+
+    function setSubscriptionId(token) {
+        $("#txtSubscriptionId").val(token);
+    }
+
+    function sendTokenToServer(token) {
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions",
+            data: JSON.stringify({ "name": topic, "token": token }),
+            contentType: "application/json"
+        }).done(function(msg) {
+            console.log("subscription " + msg);
+            $("#txtSubscriptionId").val(token);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('subscribe failed');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    messaging.onTokenRefresh(function() {
+        messaging.getToken()
+        .then(function(refreshedToken) {
+            console.log('Token refreshed. ', refreshedToken);
+            // Indicate that the new Instance ID token has not yet been sent to the
+            // app server.
+            // Send Instance ID token to app server.
+            sendTokenToServer(refreshedToken);
+            setSubscriptionId(refreshedToken);
+        })
+        .catch(function(err) {
+            console.log('Unable to retrieve refreshed token ', err);
+        });
+    });
+
+    function subscribe() {
+        messaging.getToken()
+            .then(function(currentToken) {
+                if (currentToken) {
+                    sendTokenToServer(currentToken);
+                    setSubscriptionId(currentToken);
+                } else {
+                    // Show permission request.
+                    console.log('No Instance ID token available. Request permission to generate one.');
+                    // Show permission UI.
+                }
+            })
+            .catch(function(err) {
+                console.log('An error occurred while retrieving token. ', err);
+            });
+    }
+
+    function sendMessage(msg) {
+        $.ajax({
+            method: "POST",
+            url: "/topics/" + topic + "/messages",
+            contentType: "application/json",
+            data: JSON.stringify({"message": msg})
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('fail sending');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    $( document ).ready(function() {
+        $("#btnSubscribe").click(function() {
+            subscribe();
+        });
+
+        $("#btnSend").click(function() {
+            sendMessage($("#txtMessage").val());
+            $("#txtMessage").val('');
+        });
+
+        messaging.requestPermission()
+            .then(function() {
+                console.log('Notification permission granted.');
+                // TODO(developer): Retrieve an Instance ID token for use with FCM.
+
+            })
+            .catch(function(err) {
+                console.log('Unable to get permission to notify.', err);
+            });
+    });
+</script>
+</body>
+</html>
