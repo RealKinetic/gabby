@@ -6,7 +6,7 @@
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}" />
     <link rel="stylesheet" th:href="@{/css/metisMenu.min.css}" />
     <link rel="stylesheet" th:href="@{/css/sb-admin-2.min.css}" />
-    <link rel="manifest" th:href="@{/manifest.json}">
+    <link rel="manifest" th:href="@{/manifest.json}" />
 </head>
 <body>
 
@@ -35,7 +35,6 @@
                     <input id="txtMessage" class="form-control" placeholder="send message" />
                 </div>
                 <div class="form-group">
-                    <button id="btnPull" type="submit" class="btn btn-default">Start Pulling</button>
                     <button id="btnSend" type="submit" class="btn btn-default">Send</button>
                 </div>
             </form>
@@ -45,6 +44,7 @@
         <ol id="olMessages"></ol>
     </div>
 </div>
+<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
 
 <script type="text/javascript" th:src="@{/js/jquery.min.js}"></script>
 <script type="text/javascript" th:src="@{/js/bootstrap.min.js}"></script>
@@ -52,7 +52,6 @@
 <script type="text/javascript" th:src="@{/js/sb-admin-2.min.js}"></script>
 
 <script src="https://www.gstatic.com/firebasejs/3.9.0/firebase.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.9.0/firebase-messaging.js"></script>
 <script>
   // Initialize Firebase
   var config = {
@@ -73,8 +72,65 @@
 
     messaging.onMessage(function(payload) {
         console.log("Message received. ", payload);
-        // ...
+        appendMessage(payload.data.message);
     });
+
+    function appendMessage(message) {
+        $("#messages").prepend("<li>" + message + "</li>");
+    }
+
+    function setSubscriptionId(token) {
+        $("#txtSubscriptionId").val(token);
+    }
+
+    function sendTokenToServer(token) {
+        $.ajax({
+            method: "POST",
+            url: "/subscriptions",
+            data: JSON.stringify({ "name": topic, "token": token }),
+            contentType: "application/json"
+        }).done(function(msg) {
+            console.log("subscription " + msg);
+            $("#txtSubscriptionId").val(token);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.log('subscribe failed');
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+        });
+    }
+
+    messaging.onTokenRefresh(function() {
+        messaging.getToken()
+        .then(function(refreshedToken) {
+            console.log('Token refreshed. ', refreshedToken);
+            // Indicate that the new Instance ID token has not yet been sent to the
+            // app server.
+            // Send Instance ID token to app server.
+            sendTokenToServer(refreshedToken);
+            setSubscriptionId(refreshedToken);
+        })
+        .catch(function(err) {
+            console.log('Unable to retrieve refreshed token ', err);
+        });
+    });
+
+    function subscribe() {
+        messaging.getToken()
+            .then(function(currentToken) {
+                if (currentToken) {
+                    sendTokenToServer(currentToken);
+                    setSubscriptionId(currentToken);
+                } else {
+                    // Show permission request.
+                    console.log('No Instance ID token available. Request permission to generate one.');
+                    // Show permission UI.
+                }
+            })
+            .catch(function(err) {
+                console.log('An error occurred while retrieving token. ', err);
+            });
+    }
 
     function sendMessage(msg) {
         $.ajax({
@@ -98,14 +154,6 @@
         $("#btnSend").click(function() {
             sendMessage($("#txtMessage").val());
             $("#txtMessage").val('');
-        });
-
-        $("#btnPull").click(function() {
-            if (pulling) {
-                stopPulling();
-            } else {
-                startPulling($("#txtSubscriptionId").val());
-            }
         });
 
         messaging.requestPermission()

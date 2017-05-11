@@ -1,10 +1,13 @@
 package com.realkinetic.app.gabby;
 
 import com.realkinetic.app.gabby.service.FirebaseMessagingService;
+import com.realkinetic.app.gabby.service.GooglePubSubMessagingService;
 import com.realkinetic.app.gabby.service.MessagingService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+
+import java.io.IOException;
 
 @SpringBootApplication
 public class GabbyApplication {
@@ -13,7 +16,7 @@ public class GabbyApplication {
     }
 
     @Bean
-    public MessagingService partnerService() {
-        return new FirebaseMessagingService();
+    public MessagingService partnerService() throws IOException {
+        return new GooglePubSubMessagingService();
     }
 }

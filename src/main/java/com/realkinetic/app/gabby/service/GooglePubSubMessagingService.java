@@ -9,6 +9,9 @@ import com.google.api.services.pubsub.Pubsub;
 import com.google.api.services.pubsub.model.*;
 import com.google.common.collect.ImmutableList;
 import com.realkinetic.app.gabby.model.MessageResponse;
+import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,6 +30,7 @@ public class GooglePubSubMessagingService implements MessagingService {
 
     public GooglePubSubMessagingService() throws IOException {
         this(
+                // default credentials take environment auth or GCE/appengine when deployed
                 new RetryHttpInitializerWrapper(GoogleCredential.getApplicationDefault()),
                 Utils.getDefaultTransport(),
                 Utils.getDefaultJsonFactory()
@@ -43,8 +47,8 @@ public class GooglePubSubMessagingService implements MessagingService {
     }
 
     @Override
-    public String createSubscription(String topic) throws IOException {
-        topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, topic);
+    public String createSubscription(CreateSubscriptionRequest request) throws IOException {
+        String topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, request.getName());
         Subscription subscription = new Subscription().setTopic(topic);
         String name = generateId();
         String qualified = getFullyQualifiedResourceName(ResourceType.SUBSCRIPTION, PROJECT, name);
@@ -65,7 +69,17 @@ public class GooglePubSubMessagingService implements MessagingService {
     }
 
     @Override
-    public Iterable<MessageResponse> pull(String subscriptionName) throws IOException {
+    public Observable<Iterable<MessageResponse>> pull(String subscriptionName) throws IOException {
+        return Observable.defer(() -> {
+            try {
+                return Observable.just(longPull(subscriptionName));
+            } catch (IOException e) {
+                return Observable.error(e);
+            }
+        }).subscribeOn(Schedulers.newThread());  // or we could use a named thread
+    }
+
+    private Iterable<MessageResponse> longPull(String subscriptionName) throws IOException {
         subscriptionName = getFullyQualifiedResourceName(
                 ResourceType.SUBSCRIPTION,
                 PROJECT,
@@ -134,6 +148,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .execute();
     }
 
+    // the following was pulled from google's sample cli app
     /**
      * Enum representing a resource type.
      */
@@ -168,14 +183,6 @@ public class GooglePubSubMessagingService implements MessagingService {
         }
     }
 
-    /**
-     * Returns the fully qualified resource name for Pub/Sub.
-     *
-     * @param resourceType ResourceType.
-     * @param project A project id.
-     * @param resource topic name or subscription name.
-     * @return A string in a form of PROJECT_NAME/RESOURCE_NAME
-     */
     public static String getFullyQualifiedResourceName(
             final ResourceType resourceType, final String project,
             final String resource) {
