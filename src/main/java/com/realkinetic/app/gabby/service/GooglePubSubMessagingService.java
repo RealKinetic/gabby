@@ -110,7 +110,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                             "UTF-8");
                 }
                 responses.add(
-                        new MessageResponse(body, receivedMessage.getAckId())
+                        new MessageResponse(body, receivedMessage.getAckId(), "")
                 );
             }
         }

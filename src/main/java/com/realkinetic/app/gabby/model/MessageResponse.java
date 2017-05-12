@@ -9,11 +9,17 @@ public class MessageResponse {
         return ackId;
     }
 
+    public String getTopic() {
+        return topic;
+    }
+
     final String message;
     final String ackId;
+    final String topic;
 
-    public MessageResponse(final String message, final String ackId) {
+    public MessageResponse(final String message, final String ackId, final String topic) {
         this.message = message;
         this.ackId = ackId;
+        this.topic = topic;
     }
 }

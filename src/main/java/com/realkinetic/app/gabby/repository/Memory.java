@@ -7,6 +7,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import static com.realkinetic.app.gabby.util.IdUtil.generateId;
+
 public class Memory implements Subscriber {
     private Map<String, Set<String>> subscribers;
 
@@ -45,13 +47,5 @@ public class Memory implements Subscriber {
             value = new HashSet<>();
         }
         return ImmutableSet.<String>builder().addAll(value).build();
-    }
-
-    private static String generateId() {
-        String name = UUID.randomUUID().toString().replaceAll("[\\s\\-()]", "");
-        // uuids can start with a number, sub names must start with a letter
-        Random r = new Random();
-        char c = (char) (r.nextInt(6) + 'a');
-        return c + name.substring(1);
     }
 }
