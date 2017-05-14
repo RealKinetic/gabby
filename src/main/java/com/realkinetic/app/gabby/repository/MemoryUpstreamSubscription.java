@@ -34,27 +34,35 @@ public class MemoryUpstreamSubscription implements UpstreamSubscription {
     }
 
     @Override
-    public void acknowledge(Iterable<String> ackIds) throws IOException {
-        ackIds.forEach(ackId -> {
-            this.messages.computeIfPresent(ackId, (k, disposable) -> {
-                disposable.dispose();
-                return null;
+    public Observable<Void> acknowledge(Iterable<String> ackIds) {
+        return Observable.defer(() -> {
+            ackIds.forEach(ackId -> {
+                this.messages.computeIfPresent(ackId, (k, disposable) -> {
+                    disposable.dispose();
+                    return null;
+                });
             });
+            return Observable.empty();
         });
     }
 
     @Override
-    public void push(String topic, String message) throws IOException {
-        if (!this.topics.contains(topic)) {
-            throw new IOException("topic not initialized: " + topic);
-        }
+    public Observable<Void> push(String topic, String message) {
+        return Observable.defer(() -> {
+            if (!this.topics.contains(topic)) {
+                return Observable.error(
+                        new IOException("topic not initialized: " + topic)
+                );
+            }
+            String id = IdUtil.generateId();
+            MessageResponse mr = new MessageResponse(message, id, topic);
+            Disposable disposable =
+                    Observable.interval(0, retryTime, timeUnit)
+                            .map($ -> mr)
+                            .subscribe(this.observable::onNext);
+            this.messages.put(id, disposable);
+            return Observable.empty();
+        });
 
-        String id = IdUtil.generateId();
-        MessageResponse mr = new MessageResponse(message, id, topic);
-        Disposable disposable =
-                Observable.interval(0, retryTime, timeUnit)
-                    .map($ -> mr)
-                    .subscribe(this.observable::onNext);
-        this.messages.put(id, disposable);
     }
 }

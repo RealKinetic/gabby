@@ -7,6 +7,6 @@ import java.io.IOException;
 
 public interface UpstreamSubscription {
     Observable<MessageResponse> listen();
-    void acknowledge(Iterable<String> ackIds) throws IOException;
-    void push(String topic, String message) throws IOException;
+    Observable<Void> acknowledge(Iterable<String> ackIds);
+    Observable<Void> push(String topic, String message);
 }
