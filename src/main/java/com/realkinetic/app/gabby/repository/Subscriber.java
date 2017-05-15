@@ -1,8 +1,8 @@
 package com.realkinetic.app.gabby.repository;
 
-import java.io.IOException;
+import io.reactivex.Observable;
 
 public interface Subscriber {
-    String register(String topic) throws IOException;
-    void deregister(String topic, String subscriptionId) throws IOException;
+    Observable<String> register(String topic);
+    Observable<Void> deregister(String topic, String subscriptionId);
 }
