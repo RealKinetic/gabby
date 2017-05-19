@@ -10,6 +10,7 @@ import io.reactivex.subjects.Subject;
 
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -105,7 +106,7 @@ public class MessageBroker {
         this.deadLetterQueue.remove(messageId);
     }
 
-    public Iterable<String> dispose() {
+    public List<String> dispose() {
         final boolean old = this.isDisposed.getAndSet(true);
         if (old) { // someone has already disposed
             return Collections.emptyList();

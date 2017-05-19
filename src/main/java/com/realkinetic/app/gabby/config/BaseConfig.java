@@ -12,5 +12,25 @@ public class BaseConfig implements Config {
         this.topics = topics;
     }
 
+    @Override
+    public int getDownstreamTimeout() {
+        return downstreamTimeout;
+    }
+
+    public void setDownstreamTimeout(int downstreamTimeout) {
+        this.downstreamTimeout = downstreamTimeout;
+    }
+
+    @Override
+    public int getUpstreamTimeout() {
+        return upstreamTimeout;
+    }
+
+    public void setUpstreamTimeout(int upstreamTimeout) {
+        this.upstreamTimeout = upstreamTimeout;
+    }
+
     private List<String> topics;
+    private int downstreamTimeout;
+    private int upstreamTimeout;
 }

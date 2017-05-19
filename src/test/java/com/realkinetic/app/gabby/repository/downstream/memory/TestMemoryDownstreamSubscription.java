@@ -25,6 +25,7 @@ public class TestMemoryDownstreamSubscription extends BaseObservableTest {
         return IdUtil.generateId();
     }
 
+    /*
     @Test
     public void testRegister() {
         TestObserver<String> obs = new TestObserver<>();

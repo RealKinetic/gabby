@@ -50,7 +50,7 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<Iterable<String>> unsubscribe(String subscriptionId) {
+    public Observable<List<String>> unsubscribe(String subscriptionId) {
         return Observable.defer(() -> {
             this.lock.writeLock().lock();
             // unfortunately, we are in this lock a bit longer than we want to be
@@ -94,7 +94,7 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<Iterable<String>> publish(Message message) {
+    public Observable<List<String>> publish(Message message) {
         return Observable.defer(() -> {
             this.lock.readLock().lock();
             // we're going to pull brokers out into this linked list to get
@@ -116,7 +116,7 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
                 this.lock.readLock().unlock();
             }
 
-            return Observable.<Iterable<String>>just(brokers
+            return Observable.just(brokers
                     .stream()
                     .map(mb -> {
                         mb.push(message);
