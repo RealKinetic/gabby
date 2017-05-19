@@ -1,6 +1,6 @@
 package com.realkinetic.app.gabby.controller;
 
-import com.realkinetic.app.gabby.model.MessageResponse;
+import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.model.dto.AcknowledgeMessagesRequest;
 import com.realkinetic.app.gabby.model.dto.CreateMessageRequest;
 import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
@@ -33,10 +33,10 @@ public class MessageController {
     }
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}/messages", method = RequestMethod.GET)
-    public DeferredResult<ResponseEntity<Iterable<MessageResponse>>> pull(@PathVariable String subscriptionId) throws IOException {
+    public DeferredResult<ResponseEntity<Iterable<Message>>> pull(@PathVariable String subscriptionId) throws IOException {
         log.info("starting pull");
-        DeferredResult<ResponseEntity<Iterable<MessageResponse>>> dr = new DeferredResult<>();
-        Observable<Iterable<MessageResponse>> obs = this.messagingService.pull(subscriptionId);
+        DeferredResult<ResponseEntity<Iterable<Message>>> dr = new DeferredResult<>();
+        Observable<Iterable<Message>> obs = this.messagingService.pull(subscriptionId);
         obs.subscribe(responses -> dr.setResult(ResponseEntity.ok(responses)));
         log.info("returning poll"); // prove this is thread is being returned to the spring pool
         return dr;

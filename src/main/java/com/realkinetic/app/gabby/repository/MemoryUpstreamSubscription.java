@@ -1,7 +1,7 @@
 package com.realkinetic.app.gabby.repository;
 
 import com.google.common.collect.ImmutableSet;
-import com.realkinetic.app.gabby.model.MessageResponse;
+import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
@@ -18,7 +18,7 @@ public class MemoryUpstreamSubscription implements UpstreamSubscription {
     private static Logger log = Logger.getLogger(MemoryUpstreamSubscription.class.getName());
     public static int retryTime = 10;
     public static TimeUnit timeUnit = TimeUnit.SECONDS; // emit every 10 seconds
-    private final Subject<MessageResponse> observable;
+    private final Subject<Message> observable;
     private final ImmutableSet<String> topics;
     private final Map<String, Disposable> messages;
 
@@ -29,7 +29,7 @@ public class MemoryUpstreamSubscription implements UpstreamSubscription {
     }
 
     @Override
-    public Observable<MessageResponse> listen() {
+    public Observable<Message> listen() {
         return this.observable;
     }
 
@@ -55,7 +55,7 @@ public class MemoryUpstreamSubscription implements UpstreamSubscription {
                 );
             }
             String id = IdUtil.generateId();
-            MessageResponse mr = new MessageResponse(message, id, topic);
+            Message mr = new Message(message, id, topic, IdUtil.generateId());
             Disposable disposable =
                     Observable.interval(0, retryTime, timeUnit)
                             .map($ -> mr)

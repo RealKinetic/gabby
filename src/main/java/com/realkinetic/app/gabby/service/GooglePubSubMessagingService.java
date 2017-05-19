@@ -8,8 +8,9 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.services.pubsub.Pubsub;
 import com.google.api.services.pubsub.model.*;
 import com.google.common.collect.ImmutableList;
-import com.realkinetic.app.gabby.model.MessageResponse;
+import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
+import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 
@@ -69,7 +70,7 @@ public class GooglePubSubMessagingService implements MessagingService {
     }
 
     @Override
-    public Observable<Iterable<MessageResponse>> pull(String subscriptionName) throws IOException {
+    public Observable<Iterable<Message>> pull(String subscriptionName) throws IOException {
         return Observable.defer(() -> {
             try {
                 return Observable.just(longPull(subscriptionName));
@@ -79,7 +80,7 @@ public class GooglePubSubMessagingService implements MessagingService {
         }).subscribeOn(Schedulers.newThread());  // or we could use a named thread
     }
 
-    private Iterable<MessageResponse> longPull(String subscriptionName) throws IOException {
+    private Iterable<Message> longPull(String subscriptionName) throws IOException {
         subscriptionName = getFullyQualifiedResourceName(
                 ResourceType.SUBSCRIPTION,
                 PROJECT,
@@ -94,7 +95,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .pull(subscriptionName, pullRequest)
                 .execute();
 
-        List<MessageResponse> responses = new ArrayList<>();
+        List<Message> responses = new ArrayList<>();
         List<ReceivedMessage> receivedMessages =
                 pullResponse.getReceivedMessages();
 
@@ -110,7 +111,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                             "UTF-8");
                 }
                 responses.add(
-                        new MessageResponse(body, receivedMessage.getAckId(), "")
+                        new Message(body, receivedMessage.getAckId(), "", IdUtil.generateId())
                 );
             }
         }

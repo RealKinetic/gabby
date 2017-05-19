@@ -42,6 +42,6 @@ public class MultithreadedUtil {
         } finally {
             threadPool.shutdownNow();
         }
-        assertTrue(message + "failed with exception(s)" + exceptions, exceptions.isEmpty());
+        assertTrue(message + "failed with error(s)" + exceptions, exceptions.isEmpty());
     }
 }

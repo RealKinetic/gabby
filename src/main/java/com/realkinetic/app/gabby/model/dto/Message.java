@@ -1,6 +1,6 @@
-package com.realkinetic.app.gabby.model;
+package com.realkinetic.app.gabby.model.dto;
 
-public class MessageResponse {
+public class Message {
     public String getMessage() {
         return message;
     }
@@ -13,13 +13,17 @@ public class MessageResponse {
         return topic;
     }
 
+    public String getId() { return id; }
+
     final String message;
     final String ackId;
     final String topic;
+    final String id;
 
-    public MessageResponse(final String message, final String ackId, final String topic) {
+    public Message(final String message, final String ackId, final String topic, final String id) {
         this.message = message;
         this.ackId = ackId;
         this.topic = topic;
+        this.id = id;
     }
 }

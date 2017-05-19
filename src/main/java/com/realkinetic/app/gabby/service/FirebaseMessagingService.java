@@ -8,7 +8,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Key;
-import com.realkinetic.app.gabby.model.MessageResponse;
 import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
 import io.reactivex.Observable;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -86,7 +85,7 @@ public class FirebaseMessagingService implements MessagingService {
     }
 
     @Override
-    public Observable<Iterable<MessageResponse>> pull(String subscriptionName) throws IOException {
+    public Observable<Iterable<com.realkinetic.app.gabby.model.dto.Message>> pull(String subscriptionName) throws IOException {
         throw new NotImplementedException();
     }
 
