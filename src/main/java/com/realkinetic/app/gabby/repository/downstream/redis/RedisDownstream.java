@@ -71,7 +71,7 @@ public class RedisDownstream implements DownstreamSubscription {
             Set<String> subscribers = this.getSet(topic);
             subscribers.add(subscriptionId);
             return Observable.just(subscriptionId);
-        }).subscribeOn(Schedulers.computation());
+        }).subscribeOn(Schedulers.io());
     }
 
     private Observable<List<String>> localUnsubscribe(String subscriptionId) {
@@ -116,7 +116,7 @@ public class RedisDownstream implements DownstreamSubscription {
     @Override
     public Observable<List<String>> unsubscribe(String subscriptionId) {
         return Observable.defer(() -> this.localUnsubscribe(subscriptionId).retry(5))
-                .subscribeOn(Schedulers.computation());
+                .subscribeOn(Schedulers.io());
     }
 
     private Observable<String> localAcknowledge(final String subscriptionId, final Iterable<String> messageIds) {
@@ -133,7 +133,7 @@ public class RedisDownstream implements DownstreamSubscription {
     public Observable<String> acknowledge(final String subscriptionId, final Iterable<String> messageIds) {
         return Observable.defer(
                 () -> this.localAcknowledge(subscriptionId, messageIds)
-        ).subscribeOn(Schedulers.computation());
+        ).subscribeOn(Schedulers.io());
     }
 
     private Observable<List<String>> localPublish(final Message message) {
@@ -154,7 +154,7 @@ public class RedisDownstream implements DownstreamSubscription {
     @Override
     public Observable<List<String>> publish(final Message message) {
         return Observable.defer(() -> this.localPublish(message).retry(5))
-                .subscribeOn(Schedulers.computation());
+                .subscribeOn(Schedulers.io());
     }
 
     private Observable<Maybe<Message>> localPull(final String subscriptionId) {
@@ -175,7 +175,7 @@ public class RedisDownstream implements DownstreamSubscription {
                         RBlockingDeque<ClientMessage> messages = this.getQueue(subscriptionId);
                         RBlockingDeque<ClientMessage> deadLetter = this.getDeadLetterQueue(subscriptionId);
                         ClientMessage last = deadLetter.peekLast();
-                        while (last != null && last.getTimestamp().isBefore(LocalDateTime.now().minusSeconds(this.config.getDownstreamTimeout()))) {
+                        while (last != null && last.getTimestamp() < System.currentTimeMillis() - this.config.getDownstreamTimeout() * 1000) {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
@@ -200,7 +200,7 @@ public class RedisDownstream implements DownstreamSubscription {
     @Override
     public Observable<Maybe<Message>> pull(final String subscriptionId) {
         return Observable.defer(() -> this.localPull(subscriptionId).retry(5))
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     public Iterable<String> getSubscriptions(final String topic) {

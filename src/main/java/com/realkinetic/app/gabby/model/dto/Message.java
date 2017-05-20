@@ -15,10 +15,14 @@ public class Message {
 
     public String getId() { return id; }
 
-    final String message;
-    final String ackId;
-    final String topic;
-    final String id;
+    private String message;
+    private String ackId;
+    private String topic;
+    private String id;
+
+    public Message() {
+        this("", "", "", "");
+    }
 
     public Message(final String message, final String ackId, final String topic, final String id) {
         this.message = message;

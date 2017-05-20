@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public class ClientMessage {
     private Message message;
-    private LocalDateTime timestamp;
+    private long timestamp;
 
     public Message getMessage() {
         return message;
@@ -14,11 +14,11 @@ public class ClientMessage {
         this.message = message;
     }
 
-    public LocalDateTime getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(final LocalDateTime timestamp) {
+    public void setTimestamp(final long timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -32,14 +32,18 @@ public class ClientMessage {
 
     private int numAccesses;
 
+    public ClientMessage() {
+        this(null);
+    }
+
     public ClientMessage(final Message message) {
         this.message = message;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = System.currentTimeMillis();
         this.numAccesses = 0;
     }
 
     public void touch() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = System.currentTimeMillis();
         this.numAccesses++;
     }
 }

@@ -5,7 +5,9 @@ import com.realkinetic.app.gabby.base.BaseObservableTest;
 import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.util.IdUtil;
+import io.reactivex.Maybe;
 import io.reactivex.observers.TestObserver;
+import io.reactivex.schedulers.Schedulers;
 import org.junit.*;
 
 import java.util.List;
@@ -32,8 +34,8 @@ public class RedisDownstreamTest extends BaseObservableTest {
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         redisDownstream.subscribe(topic, subscriptionId).subscribe(obs);
-        this.testScheduler.advanceTimeBy(10, TimeUnit.SECONDS);
         this.advance();
+        obs.awaitDone(10, TimeUnit.SECONDS);
         obs.assertValue(subscriptionId);
 
         List<String> subscriptions = Lists.newArrayList(redisDownstream.getSubscriptions(topic));
@@ -46,8 +48,8 @@ public class RedisDownstreamTest extends BaseObservableTest {
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         redisDownstream.subscribe(topic, subscriptionId).subscribe(obs);
-        this.testScheduler.advanceTimeBy(10, TimeUnit.SECONDS);
         this.advance();
+        obs.awaitDone(10, TimeUnit.SECONDS);
         obs.assertValue(subscriptionId);
 
         TestObserver<List<String>> finalObs = this.getTestObserver();
@@ -69,26 +71,28 @@ public class RedisDownstreamTest extends BaseObservableTest {
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         redisDownstream.subscribe(topic, subscriptionId).subscribe(obs);
-        this.testScheduler.advanceTimeBy(10, TimeUnit.SECONDS);
         this.advance();
+        obs.awaitDone(10, TimeUnit.SECONDS);
 
-        //TestObserver<Maybe<Message>> mobs = this.getTestObserver();
-        //redisDownstream.pull(subscriptionId).subscribe(mobs);
+        TestObserver<Maybe<Message>> mobs = this.getTestObserver();
+        redisDownstream.pull(subscriptionId)
+                .subscribe(mobs);
 
         TestObserver<List<String>> sobs = this.getTestObserver();
-        redisDownstream.publish(new Message("test", "ackid", topic, IdUtil.generateId())).subscribe(sobs);
+        redisDownstream.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+                .subscribe(sobs);
 
         this.advance();
 
         sobs.awaitDone(10, TimeUnit.SECONDS);
         sobs.assertNoErrors();
-        //mobs.awaitDone(10, TimeUnit.SECONDS);
-        //mobs.assertNoErrors();
+        mobs.awaitDone(10, TimeUnit.SECONDS);
+        mobs.assertNoErrors();
 
 
         LOG.info("awaiting done");
 
-        //mobs.assertValue(msg -> msg.blockingGet().getMessage().equals("test"));
+        mobs.assertValue(msg -> msg.blockingGet().getMessage().equals("test"));
         sobs.assertValue(Lists.newArrayList(subscriptionId));
     }
 }
