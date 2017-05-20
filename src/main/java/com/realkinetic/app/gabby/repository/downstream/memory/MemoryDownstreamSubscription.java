@@ -127,7 +127,7 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<Maybe<Message>> pull(String subscriptionId) {
+    public Observable<List<Message>> pull(final boolean returnImmediately, String subscriptionId) {
         return Observable.defer(() -> {
             this.lock.readLock().lock();
             final MessageBroker mb;

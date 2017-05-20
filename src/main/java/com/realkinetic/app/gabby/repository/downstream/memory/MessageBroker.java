@@ -31,7 +31,7 @@ public class MessageBroker {
     private final String subscriptionId;
     private final BlockingQueue<PrivateMessage> messages;
     private final Map<String, PrivateMessage> deadLetterQueue;
-    private final Subject<Maybe<Message>> disposedObs;
+    private final Subject<List<Message>> disposedObs;
     private final AtomicBoolean isDisposed;
     private final Map<String, Disposable> disposables;
 
@@ -52,16 +52,16 @@ public class MessageBroker {
         this.messages.offer(pm);
     }
 
-    public Observable<Maybe<Message>> pull() {
+    public Observable<List<Message>> pull() {
         // there is a slight issue here in that it's possible for a user to
         // cancel a subscription while still holding onto this poll.
         return Observable.defer(() -> {
             if (this.isDisposed.get()) {
-                return Observable.just(Maybe.<Message>empty());
+                return Observable.just(Collections.<Message>emptyList());
             }
             PrivateMessage msg = this.messages.poll(TIMEOUT, TimeUnit.SECONDS);
             if (msg == null) { // did not hit the timeout
-                return Observable.just(Maybe.<Message>empty());
+                return Observable.just(Collections.<Message>emptyList());
             }
 
             if (msg.touch()) {
@@ -89,7 +89,7 @@ public class MessageBroker {
                 this.disposables.put(msg.getMessage().getId(), disposable);
             }
 
-            return Observable.just(Maybe.just(msg.getMessage()));
+            return Observable.just(Collections.singletonList(msg.getMessage()));
         })
                 .mergeWith(this.disposedObs)
                 .take(1)
@@ -112,7 +112,7 @@ public class MessageBroker {
             return Collections.emptyList();
         }
 
-        this.disposedObs.onNext(Maybe.empty());
+        this.disposedObs.onNext(Collections.emptyList());
         this.disposedObs.onComplete();
         this.disposables.forEach(($, disposable) -> disposable.dispose());
         this.disposables.clear();

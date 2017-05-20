@@ -5,17 +5,12 @@ import com.realkinetic.app.gabby.config.Config;
 import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
-import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import org.redisson.Redisson;
 import org.redisson.api.*;
-import org.redisson.client.codec.Codec;
-import org.redisson.codec.DefaultCodecProvider;
-import org.redisson.codec.MsgPackJacksonCodec;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,7 +21,7 @@ import java.util.stream.Collectors;
 
 public class RedisDownstream implements DownstreamSubscription {
     private static final Logger LOG = Logger.getLogger(RedisDownstream.class.getName());
-    private static final int MAX_ACCESSES = 10;
+    public static final int MAX_ACCESSES = 10;
     private final Config config;
     private final RedissonClient rc;
 
@@ -97,8 +92,6 @@ public class RedisDownstream implements DownstreamSubscription {
             messageIds.push(msg.getMessage().getId());
         });
 
-
-
         RBlockingDeque<ClientMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
         deadMessages.forEach(msg -> {
             messageIds.push(msg.getMessage().getId());
@@ -157,14 +150,22 @@ public class RedisDownstream implements DownstreamSubscription {
                 .subscribeOn(Schedulers.io());
     }
 
-    private Observable<Maybe<Message>> localPull(final String subscriptionId) {
+    private Observable<List<Message>> localPull(final boolean returnImmediately,
+                                                 final String subscriptionId) {
+
         ClientMessage message;
         try {
-            message = this.getQueue(subscriptionId).pollLastAndOfferFirstTo(
-                    this.getDeadLetterQueue(subscriptionId).getName(),
-                    this.config.getDownstreamTimeout(),  // doesn't have to be this setting
-                    TimeUnit.SECONDS
-            );
+            if (returnImmediately) {
+                message = this.getQueue(subscriptionId)
+                        .pollLastAndOfferFirstTo(this.getDeadLetterQueue(subscriptionId).getName());
+            } else {
+                message = this.getQueue(subscriptionId).pollLastAndOfferFirstTo(
+                        this.getDeadLetterQueue(subscriptionId).getName(),
+                        this.config.getDownstreamTimeout(),  // doesn't have to be this setting
+                        TimeUnit.SECONDS
+                );
+            }
+
         } catch (Exception e) {
             return Observable.error(e);
         }
@@ -179,9 +180,11 @@ public class RedisDownstream implements DownstreamSubscription {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
-                            if (last.getNumAccesses() < MAX_ACCESSES) {
+                            if (last.getNumAccesses() < MAX_ACCESSES - 1) {
+                                ClientMessage copy = new ClientMessage(last);
                                 last.touch();
                                 messages.putFirst(last);
+                                last = copy; // ensures remove works properly
                             } else {
                                 this.acknowledge(subscriptionId, Collections.singleton(last.getMessage().getId()));
                             }
@@ -191,15 +194,17 @@ public class RedisDownstream implements DownstreamSubscription {
                         }
                     });
 
-            return Observable.just(Maybe.just(message.getMessage()));
+            return Observable.just(Collections.singletonList(message.getMessage()));
         }
 
-        return Observable.just(Maybe.empty());
+        return Observable.just(Collections.emptyList());
     }
 
     @Override
-    public Observable<Maybe<Message>> pull(final String subscriptionId) {
-        return Observable.defer(() -> this.localPull(subscriptionId).retry(5))
+    public Observable<List<Message>> pull(final boolean returnImmediately,
+                                           final String subscriptionId) {
+
+        return Observable.defer(() -> this.localPull(returnImmediately, subscriptionId).retry(5))
                 .subscribeOn(Schedulers.io());
     }
 

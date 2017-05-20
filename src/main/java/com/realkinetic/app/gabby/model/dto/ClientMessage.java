@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class ClientMessage {
     private Message message;
     private long timestamp;
+    private int numAccesses;
 
     public Message getMessage() {
         return message;
@@ -30,16 +31,24 @@ public class ClientMessage {
         this.numAccesses = numAccesses;
     }
 
-    private int numAccesses;
-
     public ClientMessage() {
-        this(null);
+        this((Message) null);
     }
 
     public ClientMessage(final Message message) {
         this.message = message;
         this.timestamp = System.currentTimeMillis();
         this.numAccesses = 0;
+    }
+
+    /*
+     * Copy constructor.  Does a shallow copy of Message, which should be
+     * immutable.
+     */
+    public ClientMessage(final ClientMessage clientMessage) {
+        this.numAccesses = clientMessage.numAccesses;
+        this.timestamp = clientMessage.timestamp;
+        this.message = clientMessage.message;
     }
 
     public void touch() {

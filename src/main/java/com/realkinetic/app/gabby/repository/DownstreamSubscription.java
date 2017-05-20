@@ -17,5 +17,5 @@ public interface DownstreamSubscription {
     // returns a list of subscriptionIds that were "notified" of the publish
     Observable<List<String>> publish(Message message);
     // this will be null in the case of a timeout, force client to resubscribe
-    Observable<Maybe<Message>> pull(String subscriptionId);
+    Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
 }
