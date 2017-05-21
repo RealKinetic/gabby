@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-public class CachedMultiplexer implements MultiplexingService, Observer<Message> {
+public class CachedMultiplexer implements Observer<Message> {
     private final static Logger LOG = Logger.getLogger(CachedMultiplexer.class.getName());
     private final static long DELAY_TIME = 1;
     private final static TimeUnit DELAY_UNIT = TimeUnit.SECONDS;
@@ -29,21 +29,6 @@ public class CachedMultiplexer implements MultiplexingService, Observer<Message>
             LOG.warning("encountered error from upstream subscription: " + err.getMessage());
             return Observable.timer(DELAY_TIME, DELAY_UNIT);
         })).subscribe(this);
-    }
-
-    @Override
-    public String createSubscription(String topic) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Observable<Message> listen(String subscriptionId) throws IOException {
-        return null;
-    }
-
-    @Override
-    public void acknowledge(Iterable<String> ackIds) throws IOException {
-
     }
 
     @Override

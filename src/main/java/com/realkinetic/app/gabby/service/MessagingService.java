@@ -5,11 +5,18 @@ import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
 import io.reactivex.Observable;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface MessagingService {
-    String createSubscription(CreateSubscriptionRequest request) throws IOException;
-    void deleteSubscription(String subscriptionName) throws IOException;
-    Observable<Iterable<Message>> pull(String subscriptionName) throws IOException;
-    void acknowledge(String subscriptionName, Iterable<String> ackIds) throws IOException;
-    void send(String topic, String message) throws IOException;
+    // returns the subscription id
+    Observable<String> subscribe(String topic, String subscriptionId);
+    // returns a list of message ids that this subscription has not yet
+    // acknowledged.
+    Observable<List<String>> unsubscribe(String subscriptionId);
+    // returns the subscriptionid
+    Observable<String> acknowledge(String subscriptionId, Iterable<String> messageIds);
+    // returns a list of subscriptionIds that were "notified" of the publish
+    Observable<List<String>> publish(Message message);
+    // this will be null in the case of a timeout, force client to resubscribe
+    Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
 }

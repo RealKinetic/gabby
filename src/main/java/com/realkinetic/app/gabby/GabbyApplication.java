@@ -3,8 +3,11 @@ package com.realkinetic.app.gabby;
 import com.realkinetic.app.gabby.config.Config;
 import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.YamlConfig;
+import com.realkinetic.app.gabby.repository.DownstreamSubscription;
+import com.realkinetic.app.gabby.repository.downstream.redis.RedisDownstream;
 import com.realkinetic.app.gabby.service.GooglePubSubMessagingService;
 import com.realkinetic.app.gabby.service.MessagingService;
+import com.realkinetic.app.gabby.service.StandAloneMessagingService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +25,13 @@ public class GabbyApplication {
     }
 
     @Bean
+    public DownstreamSubscription downstreamSubscription() {
+        return new RedisDownstream(config());
+    }
+
+    @Bean
     public MessagingService partnerService() throws IOException {
-        return new GooglePubSubMessagingService();
+        return new StandAloneMessagingService(downstreamSubscription());
     }
 
     @Bean // so this can be autowired

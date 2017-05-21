@@ -3,24 +3,25 @@ package com.realkinetic.app.gabby.model.dto;
 import org.hibernate.validator.constraints.NotEmpty;
 
 public class CreateSubscriptionRequest {
-    public String getName() {
-        return name;
+    public String getTopic() {
+        return topic;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+
+    public String getSubscriptionId() {
+        return subscriptionId;
+    }
+
+    public void setSubscriptionId(String subscriptionId) {
+        this.subscriptionId = subscriptionId;
     }
 
     @NotEmpty
-    private String name;
+    private String subscriptionId;
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    private String token;
+    @NotEmpty
+    private String topic;
 }

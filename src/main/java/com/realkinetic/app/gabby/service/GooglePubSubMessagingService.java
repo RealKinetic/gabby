@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 
 import static com.google.common.collect.Lists.newArrayList;
 
-public class GooglePubSubMessagingService implements MessagingService {
+public class GooglePubSubMessagingService {
     private static final Logger log = Logger.getLogger(GooglePubSubMessagingService.class.getName());
     private static final String APP_NAME = "gabby";
     private static final String PROJECT = "rk-playground";
@@ -47,9 +47,8 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .build();
     }
 
-    @Override
     public String createSubscription(CreateSubscriptionRequest request) throws IOException {
-        String topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, request.getName());
+        String topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, request.getTopic());
         Subscription subscription = new Subscription().setTopic(topic);
         String name = generateId();
         String qualified = getFullyQualifiedResourceName(ResourceType.SUBSCRIPTION, PROJECT, name);
@@ -61,7 +60,6 @@ public class GooglePubSubMessagingService implements MessagingService {
         return name;
     }
 
-    @Override
     public void deleteSubscription(String subscriptionName) throws IOException {
         this.pubsub.projects()
                 .subscriptions()
@@ -69,7 +67,6 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .execute();
     }
 
-    @Override
     public Observable<Iterable<Message>> pull(String subscriptionName) throws IOException {
         return Observable.defer(() -> {
             try {
@@ -119,7 +116,6 @@ public class GooglePubSubMessagingService implements MessagingService {
         return responses;
     }
 
-    @Override
     public void acknowledge(String subscriptionName, Iterable<String> ackIds) throws IOException {
         AcknowledgeRequest acknowledgeRequest = new AcknowledgeRequest()
                 .setAckIds(newArrayList(ackIds));
@@ -135,7 +131,6 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .execute();
     }
 
-    @Override
     public void send(String topic, String message) throws IOException {
         topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, topic);
         PubsubMessage pubsubMessage = new PubsubMessage()
