@@ -8,8 +8,9 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.services.pubsub.Pubsub;
 import com.google.api.services.pubsub.model.*;
 import com.google.common.collect.ImmutableList;
-import com.realkinetic.app.gabby.model.MessageResponse;
+import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
+import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 
@@ -22,7 +23,7 @@ import java.util.logging.Logger;
 
 import static com.google.common.collect.Lists.newArrayList;
 
-public class GooglePubSubMessagingService implements MessagingService {
+public class GooglePubSubMessagingService {
     private static final Logger log = Logger.getLogger(GooglePubSubMessagingService.class.getName());
     private static final String APP_NAME = "gabby";
     private static final String PROJECT = "rk-playground";
@@ -46,9 +47,8 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .build();
     }
 
-    @Override
     public String createSubscription(CreateSubscriptionRequest request) throws IOException {
-        String topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, request.getName());
+        String topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, request.getTopic());
         Subscription subscription = new Subscription().setTopic(topic);
         String name = generateId();
         String qualified = getFullyQualifiedResourceName(ResourceType.SUBSCRIPTION, PROJECT, name);
@@ -60,7 +60,6 @@ public class GooglePubSubMessagingService implements MessagingService {
         return name;
     }
 
-    @Override
     public void deleteSubscription(String subscriptionName) throws IOException {
         this.pubsub.projects()
                 .subscriptions()
@@ -68,8 +67,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .execute();
     }
 
-    @Override
-    public Observable<Iterable<MessageResponse>> pull(String subscriptionName) throws IOException {
+    public Observable<Iterable<Message>> pull(String subscriptionName) throws IOException {
         return Observable.defer(() -> {
             try {
                 return Observable.just(longPull(subscriptionName));
@@ -79,7 +77,7 @@ public class GooglePubSubMessagingService implements MessagingService {
         }).subscribeOn(Schedulers.newThread());  // or we could use a named thread
     }
 
-    private Iterable<MessageResponse> longPull(String subscriptionName) throws IOException {
+    private Iterable<Message> longPull(String subscriptionName) throws IOException {
         subscriptionName = getFullyQualifiedResourceName(
                 ResourceType.SUBSCRIPTION,
                 PROJECT,
@@ -94,7 +92,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .pull(subscriptionName, pullRequest)
                 .execute();
 
-        List<MessageResponse> responses = new ArrayList<>();
+        List<Message> responses = new ArrayList<>();
         List<ReceivedMessage> receivedMessages =
                 pullResponse.getReceivedMessages();
 
@@ -110,7 +108,7 @@ public class GooglePubSubMessagingService implements MessagingService {
                             "UTF-8");
                 }
                 responses.add(
-                        new MessageResponse(body, receivedMessage.getAckId(), "")
+                        new Message(body, receivedMessage.getAckId(), "", IdUtil.generateId())
                 );
             }
         }
@@ -118,7 +116,6 @@ public class GooglePubSubMessagingService implements MessagingService {
         return responses;
     }
 
-    @Override
     public void acknowledge(String subscriptionName, Iterable<String> ackIds) throws IOException {
         AcknowledgeRequest acknowledgeRequest = new AcknowledgeRequest()
                 .setAckIds(newArrayList(ackIds));
@@ -134,7 +131,6 @@ public class GooglePubSubMessagingService implements MessagingService {
                 .execute();
     }
 
-    @Override
     public void send(String topic, String message) throws IOException {
         topic = getFullyQualifiedResourceName(ResourceType.TOPIC, PROJECT, topic);
         PubsubMessage pubsubMessage = new PubsubMessage()

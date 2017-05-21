@@ -1,13 +1,12 @@
-package com.realkinetic.app.gabby.service;
+package com.realkinetic.app.gabby.repository;
 
 import com.realkinetic.app.gabby.model.dto.Message;
-import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
+import io.reactivex.Maybe;
 import io.reactivex.Observable;
 
-import java.io.IOException;
 import java.util.List;
 
-public interface MessagingService {
+public interface DownstreamSubscription {
     // returns the subscription id
     Observable<String> subscribe(String topic, String subscriptionId);
     // returns a list of message ids that this subscription has not yet
@@ -19,4 +18,5 @@ public interface MessagingService {
     Observable<List<String>> publish(Message message);
     // this will be null in the case of a timeout, force client to resubscribe
     Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
+    Observable<List<String>> getSubscriptions(String topic);
 }
