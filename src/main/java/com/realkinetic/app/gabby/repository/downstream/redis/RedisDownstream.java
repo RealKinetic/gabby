@@ -208,7 +208,9 @@ public class RedisDownstream implements DownstreamSubscription {
                 .subscribeOn(Schedulers.io());
     }
 
-    public Iterable<String> getSubscriptions(final String topic) {
-        return this.getSet(topic).stream().collect(Collectors.toList());
+    public Observable<List<String>> getSubscriptions(final String topic) {
+        return Observable.defer(() ->
+            Observable.just(this.getSet(topic).stream().collect(Collectors.toList()))
+        );
     }
 }

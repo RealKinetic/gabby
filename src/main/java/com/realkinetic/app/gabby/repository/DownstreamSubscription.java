@@ -18,4 +18,5 @@ public interface DownstreamSubscription {
     Observable<List<String>> publish(Message message);
     // this will be null in the case of a timeout, force client to resubscribe
     Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
+    Observable<List<String>> getSubscriptions(String topic);
 }

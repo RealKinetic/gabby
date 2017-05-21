@@ -1,5 +1,6 @@
 package com.realkinetic.app.gabby.repository.downstream.memory;
 
+import com.google.api.client.util.Lists;
 import com.google.common.collect.ImmutableSet;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.model.error.*;
@@ -146,13 +147,13 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         }).subscribeOn(Schedulers.computation());
     }
 
-    public Observable<ImmutableSet<String>> getSubscribers(String topic) {
+    public Observable<List<String>> getSubscriptions(String topic) {
         return Observable.defer(() -> {
             Set<String> value = this.topics.get(topic);
             if (value == null) {
                 value = new ConcurrentSkipListSet<>();
             }
-            return Observable.just(ImmutableSet.<String>builder().addAll(value).build());
+            return Observable.<List<String>>just(Lists.newArrayList(value));
         }).subscribeOn(Schedulers.computation());
     }
 }
