@@ -127,7 +127,7 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
             final List<PubsubMessage> messages = ImmutableList.of(pubsubMessage);
             final PublishRequest publishRequest = new PublishRequest();
             publishRequest.setMessages(messages);
-            PublishResponse publishResponse = this.pubsub.projects()
+            final PublishResponse publishResponse = this.pubsub.projects()
                     .topics()
                     .publish(qTopic, publishRequest)
                     .execute();
@@ -229,7 +229,7 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
                     .create(qTopic, new Topic())
                     .execute();
             return Observable.just(topic);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     // the following was pulled from google's sample cli app
