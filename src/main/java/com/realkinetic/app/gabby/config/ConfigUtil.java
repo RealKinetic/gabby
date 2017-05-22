@@ -11,4 +11,14 @@ public class ConfigUtil {
 
         return Collections.emptyList();
     }
+
+    public static List<String> validateStringNotEmpty(String value, String name) {
+        if (value == null || value.isEmpty()) {
+            return Collections.singletonList(name + " must not be empty");
+        }
+
+        return Collections.emptyList();
+    }
 }
+
+

@@ -187,7 +187,7 @@ public class RedisDownstream implements DownstreamSubscription {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
-                            if (last.getNumAccesses() < this.config.getMaxAccesses() - 1) {
+                            if (last.getNumAccesses() < this.redisConfig.getMaxAccesses() - 1) {
                                 ClientMessage copy = new ClientMessage(last);
                                 last.touch();
                                 messages.putFirst(last);

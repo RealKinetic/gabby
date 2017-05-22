@@ -34,6 +34,14 @@ public class RedisConfig {
         this.connectionPoolSize = connectionPoolSize;
     }
 
+    public int getMaxAccesses() {
+        return this.maxAccesses;
+    }
+
+    public void setMaxAccesses(int maxAccesses) {
+        this.maxAccesses = maxAccesses;
+    }
+
     public List<String> validate() {
         List<String> errors = new ArrayList<>();
         if (this.hosts == null || this.hosts.size() == 0) {
@@ -49,4 +57,5 @@ public class RedisConfig {
 
     private List<String> hosts;
     private int connectionPoolSize;
+    private int maxAccesses = 10;
 }
