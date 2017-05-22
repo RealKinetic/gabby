@@ -2,9 +2,12 @@ topics:
   - test
 downstreamTimeout: 90
 upstreamTimeout: 180
-maxAccesses: 10
-downstream: redis
+downstream: googlepubsub
 redisConfig:
   hosts:
     - "127.0.0.1:6379"
   connectionPoolSize: 100
+  maxAccesses: 10
+googlePubsubConfig:
+  project: "static-files-rk"
+  appName: "gabby"
