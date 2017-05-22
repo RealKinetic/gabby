@@ -14,9 +14,16 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.config;
 
+import com.google.common.collect.Sets;
+
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class BaseConfig implements Config {
+    private static final Set<String> validDownstreams = Sets.newHashSet("redis");
+
     @Override
     public List<String> getTopics() {
         return topics;
@@ -44,7 +51,64 @@ public class BaseConfig implements Config {
         this.upstreamTimeout = upstreamTimeout;
     }
 
+    @Override
+    public String getDownstream() {
+        return downstream;
+    }
+
+    public void setDownstream(String downstream) {
+        this.downstream = downstream;
+    }
+
+    @Override
+    public RedisConfig getRedisConfig() {
+        return this.redisConfig;
+    }
+
+    public void setRedisConfig(final RedisConfig redisConfig) {
+        this.redisConfig = redisConfig;
+    }
+
+    @Override
+    public int getMaxAccesses() {
+        return maxAccesses;
+    }
+
+    public void setMaxAccesses(int maxAccesses) {
+        this.maxAccesses = maxAccesses;
+    }
+
+    public List<String> validate() {
+        List<String> errors = new ArrayList<>();
+        if (this.downstream == null || this.downstream.isEmpty()) {
+            return Collections.singletonList("must contain a downstream provider");
+        } else {
+            String downstream = this.downstream.toLowerCase().trim();
+            switch (downstream) {
+                case "redis":
+                    if (this.redisConfig == null) {
+                        errors.add("must provide redis configuration");
+                    } else {
+                        errors.addAll(this.redisConfig.validate());
+                    }
+                    break;
+                case "memory":
+                    break; // no real configuration right now
+                default:
+                    errors.add(this.downstream + " is not a valid downstream provider");
+            }
+        }
+
+        errors.addAll(ConfigUtil.validateParameterGreaterThanZero(downstreamTimeout, "downstreamTimeout"));
+        errors.addAll(ConfigUtil.validateParameterGreaterThanZero(upstreamTimeout, "upstreamTimeout"));
+        errors.addAll(ConfigUtil.validateParameterGreaterThanZero(maxAccesses, "maxAccesses"));
+        return errors;
+    }
+
     private List<String> topics;
     private int downstreamTimeout;
     private int upstreamTimeout;
+    private String downstream;
+    private RedisConfig redisConfig;
+    private int maxAccesses;
 }

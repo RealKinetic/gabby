@@ -16,6 +16,7 @@ package com.realkinetic.app.gabby.repository.downstream.redis;
 
 import com.google.common.collect.Sets;
 import com.realkinetic.app.gabby.config.Config;
+import com.realkinetic.app.gabby.config.RedisConfig;
 import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
@@ -35,17 +36,18 @@ import java.util.stream.Collectors;
 
 public class RedisDownstream implements DownstreamSubscription {
     private static final Logger LOG = Logger.getLogger(RedisDownstream.class.getName());
-    public static final int MAX_ACCESSES = 10;
     private final Config config;
     private final RedissonClient rc;
+    private final RedisConfig redisConfig;
 
     @Autowired
     public RedisDownstream(Config config) {
         this.config = config;
+        this.redisConfig = config.getRedisConfig();
         org.redisson.config.Config redissonConfig = new org.redisson.config.Config();
         redissonConfig.useSingleServer()
-                .setAddress("127.0.0.1:6379")
-                .setConnectionPoolSize(1000);
+                .setAddress(this.redisConfig.getHosts().get(0))
+                .setConnectionPoolSize(this.redisConfig.getConnectionPoolSize());
 
         this.rc = Redisson.create(redissonConfig);
     }
@@ -185,7 +187,7 @@ public class RedisDownstream implements DownstreamSubscription {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
-                            if (last.getNumAccesses() < MAX_ACCESSES - 1) {
+                            if (last.getNumAccesses() < this.config.getMaxAccesses() - 1) {
                                 ClientMessage copy = new ClientMessage(last);
                                 last.touch();
                                 messages.putFirst(last);

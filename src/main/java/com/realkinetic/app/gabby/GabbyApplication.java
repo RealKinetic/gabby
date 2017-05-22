@@ -15,11 +15,10 @@ specific language governing permissions and limitations under the License.
 package com.realkinetic.app.gabby;
 
 import com.realkinetic.app.gabby.config.Config;
-import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.YamlConfig;
+import com.realkinetic.app.gabby.model.error.InvalidConfigurationException;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import com.realkinetic.app.gabby.repository.downstream.redis.RedisDownstream;
-import com.realkinetic.app.gabby.service.GooglePubSubMessagingService;
 import com.realkinetic.app.gabby.service.MessagingService;
 import com.realkinetic.app.gabby.service.StandAloneMessagingService;
 import org.springframework.boot.SpringApplication;
@@ -31,12 +30,14 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
+import java.util.logging.Logger;
 
 @SpringBootApplication
 @EnableSwagger2
 public class GabbyApplication {
+    private static final Logger LOG = Logger.getLogger(GabbyApplication.class.getName());
     private static final Object LOCK = new Object();
     private static volatile Config CONFIG;
 
@@ -45,26 +46,29 @@ public class GabbyApplication {
     }
 
     @Bean
-    public DownstreamSubscription downstreamSubscription() {
+    public DownstreamSubscription downstreamSubscription() throws IOException, InvalidConfigurationException {
         return new RedisDownstream(config());
     }
 
     @Bean
-    public MessagingService partnerService() throws IOException {
+    public MessagingService partnerService() throws IOException, InvalidConfigurationException {
         return new StandAloneMessagingService(downstreamSubscription());
     }
 
     @Bean // so this can be autowired
-    public Config config() {
+    public Config config() throws IOException, InvalidConfigurationException {
         Config config = CONFIG;
         if (config == null) {
             synchronized (LOCK) {
                 config = CONFIG;
                 if (config == null) {
-                    try {
-                        config = YamlConfig.load();
-                    } catch (FileNotFoundException e) {
-                        config = DefaultConfig.load();
+                    config = YamlConfig.load();
+                    List<String> errors = config.validate();
+                    if (errors != null && errors.size() > 0) {
+                        errors.forEach(message -> {
+                            LOG.severe(message + "\n");
+                        });
+                        throw new InvalidConfigurationException(errors);
                     }
                     CONFIG = config;
                 }

@@ -22,4 +22,14 @@ public interface Config {
     int getUpstreamTimeout();
     // amount of time in seconds for a downstream acknowledgement timeout
     int getDownstreamTimeout();
+    // the type of the downstream provider
+    String getDownstream();
+    // redis config if configured for redis, if not, this can be null
+    RedisConfig getRedisConfig();
+    // number of times we return a message to a client without acknowledgement
+    // before we just kill the message
+    int getMaxAccesses();
+    // validates the configuration and returns a list of errors, if the list
+    // is empty it's a valid configuration
+    List<String> validate();
 }
