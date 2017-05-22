@@ -1,3 +1,17 @@
+/*
+Copyright 2017 Real Kinetic LLC
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+*/
 package com.realkinetic.app.gabby.repository.downstream.redis;
 
 import com.google.common.collect.Sets;
@@ -59,8 +73,6 @@ public class RedisDownstream implements DownstreamSubscription {
             // was added (ie, we wrote topics in this code block but not
             // subscriptions, then no harm done.  The set removal in the
             // unsubscribe will simply remove nothing.
-
-            LOG.info("about to get set");
             Set<String> topics = this.getSet(subscriptionId);
             topics.add(topic);
             Set<String> subscribers = this.getSet(topic);
@@ -74,20 +86,15 @@ public class RedisDownstream implements DownstreamSubscription {
         // system without ACID support.  We wait until after all topics
         // have had the subscription deleted before we delete the
         // subscription set.  In this way, we can repair.
-        LOG.info("unsubscribing topic");
         RSet<String> topics = this.getSet(subscriptionId);
-        LOG.info("topics retrieved");
         // it's important that this is idempotent
         for (String topic : topics) {
             RSet<String> subscriptions = this.getSet(topic);
             subscriptions.remove(subscriptionId);
         }
 
-        LOG.info("topics unsubscribed");
-
         LinkedList<String> messageIds = new LinkedList<>();
         RBlockingDeque<ClientMessage> messages = this.getQueue(subscriptionId);
-        LOG.info("message queue retrieved");
         messages.forEach(msg -> {
             messageIds.push(msg.getMessage().getId());
         });
@@ -96,8 +103,6 @@ public class RedisDownstream implements DownstreamSubscription {
         deadMessages.forEach(msg -> {
             messageIds.push(msg.getMessage().getId());
         });
-
-        LOG.info("queues emptied");
 
         messages.delete();
         deadMessages.delete();
@@ -118,14 +123,14 @@ public class RedisDownstream implements DownstreamSubscription {
         messages.removeIf(msg -> ids.contains(msg.getMessage().getId()));
 
         RBlockingDeque<ClientMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
-        messages.removeIf(msg -> ids.contains(msg.getMessage().getId()));
+        deadMessages.removeIf(msg -> ids.contains(msg.getMessage().getId()));
         return Observable.just(subscriptionId);
     }
 
     @Override
     public Observable<String> acknowledge(final String subscriptionId, final Iterable<String> messageIds) {
         return Observable.defer(
-                () -> this.localAcknowledge(subscriptionId, messageIds)
+                () -> this.localAcknowledge(subscriptionId, messageIds).retry(5)
         ).subscribeOn(Schedulers.io());
     }
 
