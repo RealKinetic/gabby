@@ -27,6 +27,12 @@ If appengine isn't your thing, this is basically just a spring app and can be de
 #### Redis
 Redis allows us to make a non-durable out-of-order queuing service with low latencies.  Redis effectively acts as shared memory to instances that can fan out to support large numbers of long-polling instances.
 
+### API Documentation
+
+#### Swagger
+
+Just hit `/swagger-ui.html`.
+
 ### TODO
 
 - Add configuration
@@ -34,3 +40,4 @@ Redis allows us to make a non-durable out-of-order queuing service with low late
 - Load testing
 - SQL downstream to offer durable messaging
 - Add more support for memory downstreams
+- Better documented swagger.
