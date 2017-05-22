@@ -14,16 +14,11 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.config;
 
-import com.google.common.collect.Sets;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 public class BaseConfig implements Config {
-    private static final Set<String> validDownstreams = Sets.newHashSet("redis");
-
     @Override
     public List<String> getTopics() {
         return topics;
@@ -69,13 +64,12 @@ public class BaseConfig implements Config {
         this.redisConfig = redisConfig;
     }
 
-    @Override
-    public int getMaxAccesses() {
-        return maxAccesses;
+    public GooglePubsubConfig getGooglePubsubConfig() {
+        return googlePubsubConfig;
     }
 
-    public void setMaxAccesses(int maxAccesses) {
-        this.maxAccesses = maxAccesses;
+    public void setGooglePubsubConfig(GooglePubsubConfig googlePubsubConfig) {
+        this.googlePubsubConfig = googlePubsubConfig;
     }
 
     public List<String> validate() {
@@ -92,6 +86,12 @@ public class BaseConfig implements Config {
                         errors.addAll(this.redisConfig.validate());
                     }
                     break;
+                case "googlepubsub":
+                    if (this.googlePubsubConfig == null) {
+                        errors.add("must provide google pubsub configuration");
+                    } else {
+                        errors.addAll(this.googlePubsubConfig.validate());
+                    }
                 case "memory":
                     break; // no real configuration right now
                 default:
@@ -101,7 +101,6 @@ public class BaseConfig implements Config {
 
         errors.addAll(ConfigUtil.validateParameterGreaterThanZero(downstreamTimeout, "downstreamTimeout"));
         errors.addAll(ConfigUtil.validateParameterGreaterThanZero(upstreamTimeout, "upstreamTimeout"));
-        errors.addAll(ConfigUtil.validateParameterGreaterThanZero(maxAccesses, "maxAccesses"));
         return errors;
     }
 
@@ -110,5 +109,5 @@ public class BaseConfig implements Config {
     private int upstreamTimeout;
     private String downstream;
     private RedisConfig redisConfig;
-    private int maxAccesses;
+    private GooglePubsubConfig googlePubsubConfig;
 }

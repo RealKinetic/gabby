@@ -26,9 +26,8 @@ public interface Config {
     String getDownstream();
     // redis config if configured for redis, if not, this can be null
     RedisConfig getRedisConfig();
-    // number of times we return a message to a client without acknowledgement
-    // before we just kill the message
-    int getMaxAccesses();
+    // google pub sub config, if pubsub is not in use this can be null
+    GooglePubsubConfig getGooglePubsubConfig();
     // validates the configuration and returns a list of errors, if the list
     // is empty it's a valid configuration
     List<String> validate();

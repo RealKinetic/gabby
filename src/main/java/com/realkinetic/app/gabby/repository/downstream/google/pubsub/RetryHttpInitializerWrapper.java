@@ -12,7 +12,7 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 */
-package com.realkinetic.app.gabby.service;
+package com.realkinetic.app.gabby.repository.downstream.google.pubsub;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.http.HttpBackOffIOExceptionHandler;
@@ -42,11 +42,6 @@ public class RetryHttpInitializerWrapper implements HttpRequestInitializer {
             Logger.getLogger(RetryHttpInitializerWrapper.class.getName());
 
     /**
-     * One minutes in miliseconds.
-     */
-    private static final int ONEMINITUES = 60000;
-
-    /**
      * Intercepts the request for filling in the "Authorization"
      * header field, as well as recovering from certain unsuccessful
      * error codes wherein the Credential must refresh its token for a
@@ -60,13 +55,18 @@ public class RetryHttpInitializerWrapper implements HttpRequestInitializer {
     private final Sleeper sleeper;
 
     /**
+     * Defines the readTimeout of an http request in milliseconds.
+     */
+    private final long readTimeout;
+
+    /**
      * A constructor.
      *
      * @param wrappedCredential Credential which will be wrapped and
      * used for providing auth header.
      */
-    public RetryHttpInitializerWrapper(final Credential wrappedCredential) {
-        this(wrappedCredential, Sleeper.DEFAULT);
+    public RetryHttpInitializerWrapper(final Credential wrappedCredential, final long readTimeout) {
+        this(wrappedCredential, readTimeout, Sleeper.DEFAULT);
     }
 
     /**
@@ -77,9 +77,10 @@ public class RetryHttpInitializerWrapper implements HttpRequestInitializer {
      * @param sleeper Sleeper for easy testing.
      */
     RetryHttpInitializerWrapper(
-            final Credential wrappedCredential, final Sleeper sleeper) {
+            final Credential wrappedCredential, final long readTimeout, final Sleeper sleeper) {
         this.wrappedCredential = Preconditions.checkNotNull(wrappedCredential);
         this.sleeper = sleeper;
+        this.readTimeout = readTimeout * 1000;
     }
 
     /**
@@ -87,7 +88,7 @@ public class RetryHttpInitializerWrapper implements HttpRequestInitializer {
      */
     @Override
     public final void initialize(final HttpRequest request) {
-        request.setReadTimeout(2 * ONEMINITUES); // 2 minutes read timeout
+        request.setReadTimeout((int) this.readTimeout); // 2 minutes read timeout
         final HttpUnsuccessfulResponseHandler backoffHandler =
                 new HttpBackOffUnsuccessfulResponseHandler(
                         new ExponentialBackOff())

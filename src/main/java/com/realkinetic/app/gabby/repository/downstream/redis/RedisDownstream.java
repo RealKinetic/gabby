@@ -20,6 +20,7 @@ import com.realkinetic.app.gabby.config.RedisConfig;
 import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
+import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import org.redisson.Redisson;
@@ -187,13 +188,16 @@ public class RedisDownstream implements DownstreamSubscription {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
-                            if (last.getNumAccesses() < this.config.getMaxAccesses() - 1) {
+                            if (last.getNumAccesses() < this.redisConfig.getMaxAccesses() - 1) {
                                 ClientMessage copy = new ClientMessage(last);
                                 last.touch();
                                 messages.putFirst(last);
                                 last = copy; // ensures remove works properly
                             } else {
-                                this.acknowledge(subscriptionId, Collections.singleton(last.getMessage().getId()));
+                                this.acknowledge(
+                                        subscriptionId,
+                                        Collections.singleton(IdUtil.generateAckId(subscriptionId, last.getMessage().getId()))
+                                ).subscribe();
                             }
 
                             deadLetter.remove(last);
@@ -201,7 +205,12 @@ public class RedisDownstream implements DownstreamSubscription {
                         }
                     });
 
-            return Observable.just(Collections.singletonList(message.getMessage()));
+            final Message clientMessage = new Message(
+                    message.getMessage(),
+                    IdUtil.generateAckId(subscriptionId,
+                            message.getMessage().getId())
+            );
+            return Observable.just(Collections.singletonList(clientMessage));
         }
 
         return Observable.just(Collections.emptyList());
