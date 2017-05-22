@@ -220,6 +220,18 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
         }).subscribeOn(Schedulers.io());
     }
 
+    public Observable<String> createTopic(final String topic) {
+        return Observable.defer(() -> {
+            final String qTopic =
+                    getFullyQualifiedResourceName(ResourceType.TOPIC, this.pubsubConfig.getProject(), topic);
+            final Topic result = this.pubsub.projects()
+                    .topics()
+                    .create(qTopic, new Topic())
+                    .execute();
+            return Observable.just(topic);
+        });
+    }
+
     // the following was pulled from google's sample cli app
     /**
      * Enum representing a resource type.

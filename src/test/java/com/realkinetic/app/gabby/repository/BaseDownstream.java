@@ -16,16 +16,19 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class BaseDownstream extends BaseObservableTest {
     @SuppressWarnings("unchecked")
-    private <T> TestObserver getTestObserver() {
+    protected <T> TestObserver getTestObserver() {
         return new TestObserver<T>();
     }
 
     protected abstract DownstreamSubscription getDownstream();
 
+    protected abstract void createTopic(final String topic);
+
     @Test
     public void testSubscribe() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -46,6 +49,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testUnsubscribe() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -75,6 +79,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testPull() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -104,6 +109,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testMultiplePull() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId1 = IdUtil.generateId();
         String subscriptionId2 = IdUtil.generateId();
         TestObserver<String> obs1 = this.<String>getTestObserver();
@@ -150,6 +156,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testPullDeadLetter() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -190,6 +197,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testPullDeadLetterMaxAccesses() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -225,6 +233,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testAcknowledge() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);
@@ -268,6 +277,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     public void testUnsubscribeCleansQueues() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
+        this.createTopic(topic);
         String subscriptionId = IdUtil.generateId();
         TestObserver<String> obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);

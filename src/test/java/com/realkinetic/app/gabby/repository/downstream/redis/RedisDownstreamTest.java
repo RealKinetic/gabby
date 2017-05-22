@@ -30,4 +30,9 @@ public class RedisDownstreamTest extends BaseDownstream {
     protected DownstreamSubscription getDownstream() {
         return redisDownstream;
     }
+
+    @Override
+    protected void createTopic(String topic) {
+        // don't need to do anything with redis
+    }
 }
