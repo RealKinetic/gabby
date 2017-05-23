@@ -24,6 +24,7 @@ import com.google.api.services.pubsub.model.*;
 import com.google.common.collect.ImmutableList;
 import com.realkinetic.app.gabby.config.Config;
 import com.realkinetic.app.gabby.config.GooglePubsubConfig;
+import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import com.realkinetic.app.gabby.util.IdUtil;
@@ -85,14 +86,14 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<List<String>> unsubscribe(final String subscriptionId) {
+    public Observable<String> unsubscribe(final String subscriptionId) {
         return Observable.defer(() -> {
             this.pubsub.projects()
                     .subscriptions()
                     .delete(getFullyQualifiedResourceName(ResourceType.SUBSCRIPTION, this.pubsubConfig.getProject(), subscriptionId))
                     .execute();
 
-            return Observable.<List<String>>just(Collections.emptyList());
+            return Observable.just(subscriptionId);
         }).subscribeOn(Schedulers.io());
     }
 
@@ -115,7 +116,7 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<List<String>> publish(final Message message) {
+    public Observable<String> publish(final ClientMessage message) {
         return Observable.defer(() -> {
             final String qTopic = getFullyQualifiedResourceName(
                     ResourceType.TOPIC,
@@ -131,7 +132,7 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
                     .topics()
                     .publish(qTopic, publishRequest)
                     .execute();
-            return Observable.just(publishResponse.getMessageIds());
+            return Observable.just(publishResponse.getMessageIds().get(0));
         }).subscribeOn(Schedulers.io());
     }
 

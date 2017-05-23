@@ -28,7 +28,6 @@ import org.redisson.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -57,11 +56,11 @@ public class RedisDownstream implements DownstreamSubscription {
         return this.rc.getSet(key);
     }
 
-    private RBlockingDeque<ClientMessage> getQueue(String key) {
+    private RBlockingDeque<RedisMessage> getQueue(String key) {
         return this.rc.getBlockingDeque(key + ":queue");
     }
 
-    private RBlockingDeque<ClientMessage> getDeadLetterQueue(String key) {
+    private RBlockingDeque<RedisMessage> getDeadLetterQueue(String key) {
         return this.getQueue(key + ":deadletter");
     }
 
@@ -84,84 +83,81 @@ public class RedisDownstream implements DownstreamSubscription {
         }).subscribeOn(Schedulers.io());
     }
 
-    private Observable<List<String>> localUnsubscribe(String subscriptionId) {
+    private Observable<String> localUnsubscribe(String subscriptionId) {
         // This is somewhat problematic but unavoidable in a distributed
         // system without ACID support.  We wait until after all topics
         // have had the subscription deleted before we delete the
         // subscription set.  In this way, we can repair.
-        RSet<String> topics = this.getSet(subscriptionId);
+        final RSet<String> topics = this.getSet(subscriptionId);
         // it's important that this is idempotent
         for (String topic : topics) {
-            RSet<String> subscriptions = this.getSet(topic);
+            final RSet<String> subscriptions = this.getSet(topic);
             subscriptions.remove(subscriptionId);
         }
 
-        LinkedList<String> messageIds = new LinkedList<>();
-        RBlockingDeque<ClientMessage> messages = this.getQueue(subscriptionId);
-        messages.forEach(msg -> {
-            messageIds.push(msg.getMessage().getId());
-        });
-
-        RBlockingDeque<ClientMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
-        deadMessages.forEach(msg -> {
-            messageIds.push(msg.getMessage().getId());
-        });
+        final RBlockingDeque<RedisMessage> messages = this.getQueue(subscriptionId);
+        final RBlockingDeque<RedisMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
 
         messages.delete();
         deadMessages.delete();
         topics.delete();
 
-        return Observable.just(messageIds);
-    }
-
-    @Override
-    public Observable<List<String>> unsubscribe(String subscriptionId) {
-        return Observable.defer(() -> this.localUnsubscribe(subscriptionId).retry(5))
-                .subscribeOn(Schedulers.io());
-    }
-
-    private Observable<String> localAcknowledge(final String subscriptionId, final Iterable<String> messageIds) {
-        Set<String> ids = Sets.newHashSet(messageIds);
-        RBlockingDeque<ClientMessage> messages = this.getQueue(subscriptionId);
-        messages.removeIf(msg -> ids.contains(msg.getMessage().getId()));
-
-        RBlockingDeque<ClientMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
-        deadMessages.removeIf(msg -> ids.contains(msg.getMessage().getId()));
         return Observable.just(subscriptionId);
     }
 
     @Override
-    public Observable<String> acknowledge(final String subscriptionId, final Iterable<String> messageIds) {
+    public Observable<String> unsubscribe(String subscriptionId) {
+        return Observable.defer(() -> this.localUnsubscribe(subscriptionId).retry(5))
+                .subscribeOn(Schedulers.io());
+    }
+
+    private Observable<String> localAcknowledge(final String subscriptionId, final Iterable<String> ackIds) {
+        final Set<String> messageIds = Sets.newHashSet(ackIds);
+        final RBlockingDeque<RedisMessage> messages = this.getQueue(subscriptionId);
+        messages.removeIf(msg -> messageIds.contains(msg.getMessage().getId()));
+
+        final RBlockingDeque<RedisMessage> deadMessages = this.getDeadLetterQueue(subscriptionId);
+        deadMessages.removeIf(msg -> messageIds.contains(msg.getMessage().getId()));
+        return Observable.just(subscriptionId);
+    }
+
+    @Override
+    public Observable<String> acknowledge(final String subscriptionId, final Iterable<String> ackIds) {
         return Observable.defer(
-                () -> this.localAcknowledge(subscriptionId, messageIds).retry(5)
+                () -> this.localAcknowledge(subscriptionId, ackIds).retry(5)
         ).subscribeOn(Schedulers.io());
     }
 
-    private Observable<List<String>> localPublish(final Message message) {
-        LinkedList<String> subscriptionIds = new LinkedList<>();
-        Set<String> subscriptions = this.getSet(message.getTopic());
+    private Observable<String> localPublish(final ClientMessage clientMessage) {
+        final String messageId = IdUtil.generateId();
+        final Message message = new Message(
+                clientMessage.getMessage(),
+                messageId,
+                clientMessage.getTopic(),
+                messageId
+        );
+        final Set<String> subscriptions = this.getSet(message.getTopic());
         try {
             for (String subscription : subscriptions) {
-                this.getQueue(subscription).putFirst(new ClientMessage(message));
-                subscriptionIds.push(subscription);
+                this.getQueue(subscription).putFirst(new RedisMessage(message));
             }
         } catch (Exception e) {
             return Observable.error(e);
         }
 
-        return Observable.just(subscriptionIds);
+        return Observable.just(message.getId());
     }
 
     @Override
-    public Observable<List<String>> publish(final Message message) {
+    public Observable<String> publish(final ClientMessage message) {
         return Observable.defer(() -> this.localPublish(message).retry(5))
                 .subscribeOn(Schedulers.io());
     }
 
     private Observable<List<Message>> localPull(final boolean returnImmediately,
-                                                 final String subscriptionId) {
+                                                final String subscriptionId) {
 
-        ClientMessage message;
+        final RedisMessage message;
         try {
             if (returnImmediately) {
                 message = this.getQueue(subscriptionId)
@@ -181,22 +177,22 @@ public class RedisDownstream implements DownstreamSubscription {
         if (message != null) {
             Observable.timer(this.config.getDownstreamTimeout(), TimeUnit.SECONDS)
                     .subscribe($ -> {
-                        RBlockingDeque<ClientMessage> messages = this.getQueue(subscriptionId);
-                        RBlockingDeque<ClientMessage> deadLetter = this.getDeadLetterQueue(subscriptionId);
-                        ClientMessage last = deadLetter.peekLast();
+                        RBlockingDeque<RedisMessage> messages = this.getQueue(subscriptionId);
+                        RBlockingDeque<RedisMessage> deadLetter = this.getDeadLetterQueue(subscriptionId);
+                        RedisMessage last = deadLetter.peekLast();
                         while (last != null && last.getTimestamp() < System.currentTimeMillis() - this.config.getDownstreamTimeout() * 1000) {
                             // if valid, we're going to move the deadletter to the main queue
                             // if not, mark the message as acknowledged
                             // ensure we add to the main queue before deleting from deadletter
                             if (last.getNumAccesses() < this.redisConfig.getMaxAccesses() - 1) {
-                                ClientMessage copy = new ClientMessage(last);
+                                RedisMessage copy = new RedisMessage(last);
                                 last.touch();
                                 messages.putFirst(last);
                                 last = copy; // ensures remove works properly
                             } else {
                                 this.acknowledge(
                                         subscriptionId,
-                                        Collections.singleton(IdUtil.generateAckId(subscriptionId, last.getMessage().getId()))
+                                        Collections.singleton(last.getMessage().getId())
                                 ).subscribe();
                             }
 
@@ -207,8 +203,7 @@ public class RedisDownstream implements DownstreamSubscription {
 
             final Message clientMessage = new Message(
                     message.getMessage(),
-                    IdUtil.generateAckId(subscriptionId,
-                            message.getMessage().getId())
+                    message.getMessage().getAckId()
             );
             return Observable.just(Collections.singletonList(clientMessage));
         }

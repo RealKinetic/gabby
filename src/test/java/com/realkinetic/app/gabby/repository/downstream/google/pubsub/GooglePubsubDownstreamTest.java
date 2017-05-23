@@ -5,6 +5,7 @@ import com.google.common.collect.Sets;
 import com.realkinetic.app.gabby.config.BaseConfig;
 import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.GooglePubsubConfig;
+import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.BaseDownstream;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
@@ -42,12 +43,7 @@ public class GooglePubsubDownstreamTest extends BaseDownstream {
     }
 
     @Override
-    public void testPullDeadLetterMaxAccesses() {
-        // this feature isn't supported in google pub sub
-    }
-
-    @Override
-    protected void createTopic(String topic) {
+    protected void createTopic(final String topic) {
         TestObserver<String> obs = this.getTestObserver();
         pubsubDownstream.createTopic(topic).subscribe(obs);
 
@@ -57,84 +53,20 @@ public class GooglePubsubDownstreamTest extends BaseDownstream {
         obs.assertNoErrors();
     }
 
-    @Override
     @Test
-    public void testPull() {
-        // we don't know what the result of a publish will be, just generated
-        // ids from google's side
-        DownstreamSubscription ds = this.getDownstream();
-        String topic = IdUtil.generateId();
-        this.createTopic(topic);
-        String subscriptionId = IdUtil.generateId();
-        TestObserver<String> obs = this.<String>getTestObserver();
-        ds.subscribe(topic, subscriptionId).subscribe(obs);
-        this.advance();
-        obs.awaitDone(10, TimeUnit.SECONDS);
-
-        TestObserver<List<Message>> mobs = this.getTestObserver();
-        ds.pull(false, subscriptionId)
-                .subscribe(mobs);
-
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
-                .subscribe(sobs);
-
-        this.advance();
-
-        sobs.awaitDone(10, TimeUnit.SECONDS);
-        sobs.assertNoErrors();
-        mobs.awaitDone(10, TimeUnit.SECONDS);
-        mobs.assertNoErrors();
-
-        mobs.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        sobs.assertValue(msgs -> msgs.size() == 1);
+    @Override
+    public void testPullDeadLetterMaxAccesses() {
+        // this feature isn't supported in google pub sub
     }
 
-    @Override
     @Test
-    public void testMultiplePull() {
-        DownstreamSubscription ds = this.getDownstream();
-        String topic = IdUtil.generateId();
-        this.createTopic(topic);
-        String subscriptionId1 = IdUtil.generateId();
-        String subscriptionId2 = IdUtil.generateId();
-        TestObserver<String> obs1 = this.<String>getTestObserver();
-        ds.subscribe(topic, subscriptionId1).subscribe(obs1);
-        this.advance();
-        obs1.awaitDone(10, TimeUnit.SECONDS);
-
-        TestObserver<String> obs2 = this.<String>getTestObserver();
-        ds.subscribe(topic, subscriptionId2).subscribe(obs2);
-        this.advance();
-        obs2.awaitDone(10, TimeUnit.SECONDS);
-
-        TestObserver<List<Message>> mobs1 = this.getTestObserver();
-        ds.pull(false, subscriptionId1)
-                .subscribe(mobs1);
-
-        TestObserver<List<Message>> mobs2 = this.getTestObserver();
-        ds.pull(false, subscriptionId2)
-                .subscribe(mobs2);
-
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
-                .subscribe(sobs);
-
-        this.advance();
-
-        sobs.awaitDone(10, TimeUnit.SECONDS);
-        sobs.assertNoErrors();
-        mobs1.awaitDone(10, TimeUnit.SECONDS);
-        mobs1.assertNoErrors();
-        mobs2.awaitDone(10, TimeUnit.SECONDS);
-        mobs2.assertNoErrors();
-
-        mobs1.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        mobs2.assertValue(msg -> msg.get(0).getMessage().equals("test"));
+    @Override
+    public void testUnsubscribeCleansQueues() {
+        // not supported in pubsub
     }
 
-    @Override
     @Test
+    @Override
     public void testPullDeadLetter() {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
@@ -145,8 +77,8 @@ public class GooglePubsubDownstreamTest extends BaseDownstream {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+        TestObserver<String> sobs = this.getTestObserver();
+        ds.publish(new ClientMessage(topic, "test"))
                 .subscribe(sobs);
 
         TestObserver<List<Message>> mobs = this.getTestObserver();
@@ -176,56 +108,5 @@ public class GooglePubsubDownstreamTest extends BaseDownstream {
         mobs.awaitDone(10, TimeUnit.SECONDS);
         mobs.assertNoErrors();
         mobs.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-    }
-
-    @Test
-    public void testAcknowledge() {
-        DownstreamSubscription ds = this.getDownstream();
-        String topic = IdUtil.generateId();
-        this.createTopic(topic);
-        String subscriptionId = IdUtil.generateId();
-        TestObserver<String> obs = this.<String>getTestObserver();
-        ds.subscribe(topic, subscriptionId).subscribe(obs);
-        this.advance();
-        obs.awaitDone(10, TimeUnit.SECONDS);
-        Message msg = new Message("test", "ackid", topic, IdUtil.generateId());
-
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(msg)
-                .subscribe(sobs);
-
-        TestObserver<List<Message>> mobs1 = this.getTestObserver();
-        ds.pull(false, subscriptionId).subscribe(mobs1);
-
-        this.advance();
-
-        sobs.awaitDone(10, TimeUnit.SECONDS);
-        sobs.assertNoErrors();
-        mobs1.awaitDone(10, TimeUnit.SECONDS);
-        mobs1.assertNoErrors();
-        mobs1.assertValueCount(1);
-
-        TestObserver<String> aobs = this.getTestObserver();
-        ds.acknowledge(subscriptionId, Collections.singleton(mobs1.values().get(0).get(0).getAckId()))
-                .subscribe(aobs);
-
-        this.advance();
-        aobs.awaitDone(10, TimeUnit.SECONDS);
-        aobs.assertNoErrors();
-        this.advance();
-
-        mobs1 = this.getTestObserver();
-        ds.pull(true, subscriptionId).subscribe(mobs1);
-
-        this.advance();
-        mobs1.awaitDone(10, TimeUnit.SECONDS);
-        mobs1.assertNoErrors();
-        mobs1.assertValue(Collections.emptyList());
-    }
-
-    @Test
-    @Override
-    public void testUnsubscribeCleansQueues() {
-        // not supported in pubsub
     }
 }

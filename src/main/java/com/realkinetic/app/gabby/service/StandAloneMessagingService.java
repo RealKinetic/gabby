@@ -14,6 +14,7 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.service;
 
+import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import com.realkinetic.app.gabby.util.IdUtil;
@@ -39,32 +40,22 @@ public class StandAloneMessagingService implements MessagingService {
     }
 
     @Override
-    public Observable<List<String>> unsubscribe(String subscriptionId) {
+    public Observable<String> unsubscribe(String subscriptionId) {
         return this.downstreamSubscription.unsubscribe(subscriptionId);
     }
 
     @Override
     public Observable<String> acknowledge(String subscriptionId, Iterable<String> ackIds) {
-        return Observable.defer(() -> {
-           List<String> messageIds = StreamSupport
-                   .stream(ackIds.spliterator(), false)
-                   .map(LambdaExceptionUtil.rethrowFunction(IdUtil::getMessageIdFromAckId))
-                   .collect(Collectors.toList());
-           return this.downstreamSubscription.acknowledge(subscriptionId, messageIds);
-        });
+        return this.downstreamSubscription.acknowledge(subscriptionId, ackIds);
     }
 
     @Override
-    public Observable<List<String>> publish(Message message) {
+    public Observable<String> publish(final ClientMessage message) {
         return this.downstreamSubscription.publish(message);
     }
 
     @Override
     public Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId) {
-        return this.downstreamSubscription.pull(returnImmediately, subscriptionId).map(messages -> {
-            return messages.stream()
-                    .map(message -> new Message(message, IdUtil.generateAckId(subscriptionId, message.getId())))
-                    .collect(Collectors.toList());
-        });
+        return this.downstreamSubscription.pull(returnImmediately, subscriptionId);
     }
 }

@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-public class MemoryDownstreamSubscription implements DownstreamSubscription {
+public class MemoryDownstreamSubscription {
     private final ReadWriteLock lock;
     // key for subscribers is topic id
     private final Map<String, Set<String>> topics;
@@ -41,7 +41,6 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         this.lock = new ReentrantReadWriteLock();
     }
 
-    @Override
     public Observable<String> subscribe(String topic, String subscriptionId) {
         return Observable.defer(() -> {
             this.lock.writeLock().lock();
@@ -64,7 +63,6 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         }).subscribeOn(Schedulers.computation());
     }
 
-    @Override
     public Observable<List<String>> unsubscribe(String subscriptionId) {
         return Observable.defer(() -> {
             this.lock.writeLock().lock();
@@ -87,7 +85,6 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         }).subscribeOn(Schedulers.computation());
     }
 
-    @Override
     public Observable<String> acknowledge(final String subscriptionId, final Iterable<String> messageIds) {
         return Observable.defer(() -> {
             final MessageBroker mb;
@@ -108,7 +105,6 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         }).subscribeOn(Schedulers.computation());
     }
 
-    @Override
     public Observable<List<String>> publish(Message message) {
         return Observable.defer(() -> {
             this.lock.readLock().lock();
@@ -141,7 +137,6 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         }).subscribeOn(Schedulers.computation());
     }
 
-    @Override
     public Observable<List<Message>> pull(final boolean returnImmediately, String subscriptionId) {
         return Observable.defer(() -> {
             this.lock.readLock().lock();
