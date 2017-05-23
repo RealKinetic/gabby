@@ -1,7 +1,6 @@
 package com.realkinetic.app.gabby.repository.downstream.google.pubsub;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.realkinetic.app.gabby.base.IntegrationTest;
 import com.realkinetic.app.gabby.config.BaseConfig;
 import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.GooglePubsubConfig;
@@ -14,14 +13,15 @@ import io.reactivex.observers.TestObserver;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+@Category(IntegrationTest.class)
 public class GooglePubsubDownstreamTest extends BaseDownstream {
     private static final Logger LOG = Logger.getLogger(GooglePubsubDownstreamTest.class.getName());
     private static GooglePubsubDownstream pubsubDownstream;
