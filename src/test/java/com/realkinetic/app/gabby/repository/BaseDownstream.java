@@ -3,6 +3,7 @@ package com.realkinetic.app.gabby.repository;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.realkinetic.app.gabby.base.BaseObservableTest;
+import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.observers.TestObserver;
@@ -57,14 +58,14 @@ public abstract class BaseDownstream extends BaseObservableTest {
         obs.awaitDone(10, TimeUnit.SECONDS);
         obs.assertValue(subscriptionId);
 
-        TestObserver<List<String>> finalObs = this.getTestObserver();
+        TestObserver<String> finalObs = this.getTestObserver();
 
         ds.unsubscribe(subscriptionId).subscribe(finalObs);
         this.advance();
 
         finalObs.awaitDone(10, TimeUnit.SECONDS);
         finalObs.assertNoErrors();
-        finalObs.assertValue(ids -> ids.size() == 0);
+        finalObs.assertValue(subscriptionId);
 
         TestObserver<List<String>> subscribers = this.getTestObserver();
         ds.getSubscriptions(topic).subscribe(subscribers);
@@ -90,8 +91,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.pull(false, subscriptionId)
                 .subscribe(mobs);
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+        TestObserver<String> sobs = this.getTestObserver();
+        ds.publish(new ClientMessage(topic, "test"))
                 .subscribe(sobs);
 
         this.advance();
@@ -102,7 +103,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
         mobs.assertNoErrors();
 
         mobs.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        sobs.assertValue(Lists.newArrayList(subscriptionId));
+        sobs.assertValue(messageId -> !messageId.isEmpty());
     }
 
     @Test
@@ -130,8 +131,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.pull(false, subscriptionId2)
                 .subscribe(mobs2);
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+        TestObserver<String> sobs = this.getTestObserver();
+        ds.publish(new ClientMessage(topic, "test"))
                 .subscribe(sobs);
 
         this.advance();
@@ -145,11 +146,6 @@ public abstract class BaseDownstream extends BaseObservableTest {
 
         mobs1.assertValue(msg -> msg.get(0).getMessage().equals("test"));
         mobs2.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        sobs.assertValue(ids -> {
-            Set<String> expected = Sets.newHashSet(subscriptionId1, subscriptionId2);
-            Set<String> actual = Sets.newHashSet(ids);
-            return expected.equals(actual);
-        });
     }
 
     @Test
@@ -163,8 +159,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+        TestObserver<String> sobs = this.getTestObserver();
+        ds.publish(new ClientMessage(topic, "test"))
                 .subscribe(sobs);
 
         TestObserver<List<Message>> mobs = this.getTestObserver();
@@ -190,7 +186,6 @@ public abstract class BaseDownstream extends BaseObservableTest {
         mobs.assertNoErrors();
 
         mobs.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        sobs.assertValue(Lists.newArrayList(subscriptionId));
     }
 
     @Test
@@ -204,8 +199,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
-        ds.publish(new Message("test", "ackid", topic, IdUtil.generateId()))
+        TestObserver<String> sobs = this.getTestObserver();
+        ds.publish(new ClientMessage(topic, "test"))
                 .subscribe(sobs);
 
         this.advance();
@@ -239,9 +234,9 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.subscribe(topic, subscriptionId).subscribe(obs);
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
-        Message msg = new Message("test", "ackid", topic, IdUtil.generateId());
+        ClientMessage msg = new ClientMessage(topic, "test");
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
+        TestObserver<String> sobs = this.getTestObserver();
         ds.publish(msg)
                 .subscribe(sobs);
 
@@ -254,9 +249,10 @@ public abstract class BaseDownstream extends BaseObservableTest {
         sobs.assertNoErrors();
         mobs1.awaitDone(10, TimeUnit.SECONDS);
         mobs1.assertNoErrors();
+        mobs1.assertValueCount(1);
 
         TestObserver<String> aobs = this.getTestObserver();
-        ds.acknowledge(subscriptionId, Collections.singleton(msg.getId()))
+        ds.acknowledge(subscriptionId, Collections.singleton(mobs1.values().get(0).get(0).getAckId()))
                 .subscribe(aobs);
 
         this.advance();
@@ -284,9 +280,9 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
         obs.assertValue(subscriptionId);
-        Message msg = new Message("test", "ackid", topic, IdUtil.generateId());
+        ClientMessage msg = new ClientMessage(topic, "test");
 
-        TestObserver<List<String>> sobs = this.getTestObserver();
+        TestObserver<String> sobs = this.getTestObserver();
         ds.publish(msg)
                 .subscribe(sobs);
 
@@ -295,14 +291,13 @@ public abstract class BaseDownstream extends BaseObservableTest {
         sobs.awaitDone(10, TimeUnit.SECONDS);
         sobs.assertNoErrors();
 
-        TestObserver<List<String>> finalObs = this.getTestObserver();
-
+        TestObserver<String> finalObs = this.getTestObserver();
         ds.unsubscribe(subscriptionId).subscribe(finalObs);
         this.advance();
 
         finalObs.awaitDone(10, TimeUnit.SECONDS);
         finalObs.assertNoErrors();
-        finalObs.assertValue(Collections.singletonList(msg.getId()));
+        finalObs.assertValue(subscriptionId);
 
         obs = this.<String>getTestObserver();
         ds.subscribe(topic, subscriptionId).subscribe(obs);

@@ -14,41 +14,28 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.model.dto;
 
-public class Message {
-    public String getMessage() {
-        return message;
-    }
-
+public class Message extends ClientMessage {
     public String getAckId() {
         return ackId;
     }
 
-    public String getTopic() {
-        return topic;
-    }
-
     public String getId() { return id; }
 
-    private String message;
     private String ackId;
-    private String topic;
     private String id;
 
-    public Message() {
-        this("", "", "", "");
-    }
+    public Message() {}
 
     public Message(final Message message, final String ackId) {
-        this.message = message.message;
-        this.topic = message.topic;
-        this.id = message.id;
-        this.ackId = ackId;
+        this(message.getMessage(), ackId, message.getTopic(), message.id);
     }
 
-    public Message(final String message, final String ackId, final String topic, final String id) {
-        this.message = message;
+    public Message(final String message,
+                   final String ackId,
+                   final String topic,
+                   final String id) {
+        super(topic, message);
         this.ackId = ackId;
-        this.topic = topic;
         this.id = id;
     }
 }

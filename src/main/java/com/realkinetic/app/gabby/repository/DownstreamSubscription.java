@@ -14,8 +14,8 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.repository;
 
+import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
-import io.reactivex.Maybe;
 import io.reactivex.Observable;
 
 import java.util.List;
@@ -23,14 +23,14 @@ import java.util.List;
 public interface DownstreamSubscription {
     // returns the subscription id
     Observable<String> subscribe(String topic, String subscriptionId);
-    // returns a list of message ids that this subscription has not yet
-    // acknowledged.
-    Observable<List<String>> unsubscribe(String subscriptionId);
+    // returns subscription id
+    Observable<String> unsubscribe(String subscriptionId);
     // returns the subscriptionid
-    Observable<String> acknowledge(String subscriptionId, Iterable<String> messageIds);
-    // returns a list of subscriptionIds that were "notified" of the publish
-    Observable<List<String>> publish(Message message);
+    Observable<String> acknowledge(String subscriptionId, Iterable<String> ackIds);
+    // returns the message id
+    Observable<String> publish(ClientMessage message);
     // this will be null in the case of a timeout, force client to resubscribe
     Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
+    // returns a list of subscription ids for the provided topic
     Observable<List<String>> getSubscriptions(String topic);
 }

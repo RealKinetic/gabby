@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 public class TestMemoryDownstreamSubscription extends BaseObservableTest {
     private static final Logger LOG = Logger.getLogger(TestMemoryDownstreamSubscription.class.getName());
-    private DownstreamSubscription memorySubscriber;
+    private MemoryDownstreamSubscription memorySubscriber;
 
     @Before
     public void before() {

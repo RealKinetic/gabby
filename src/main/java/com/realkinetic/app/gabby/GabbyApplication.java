@@ -33,6 +33,7 @@ import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -56,7 +57,7 @@ public class GabbyApplication {
             case "googlepubsub":
                 return new GooglePubsubDownstream(config);
             default:
-                return new MemoryDownstreamSubscription();
+                throw new InvalidConfigurationException(Collections.singletonList(config.getDownstream() + " not recognized"));
         }
     }
 
