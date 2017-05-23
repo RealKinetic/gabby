@@ -18,6 +18,8 @@ import java.util.List;
 
 public interface Config {
     List<String> getTopics();
+    // amount of time the http request is open to the client before we timeout, in seconds
+    int getClientLongPollingTimeout();
     // amount of time in seconds for upstream acknowledgement timeout
     int getUpstreamTimeout();
     // amount of time in seconds for a downstream acknowledgement timeout
@@ -28,6 +30,8 @@ public interface Config {
     RedisConfig getRedisConfig();
     // google pub sub config, if pubsub is not in use this can be null
     GooglePubsubConfig getGooglePubsubConfig();
+    // memory config, this may be null if not using memory downstream
+    MemoryConfig getMemoryConfig();
     // validates the configuration and returns a list of errors, if the list
     // is empty it's a valid configuration
     List<String> validate();

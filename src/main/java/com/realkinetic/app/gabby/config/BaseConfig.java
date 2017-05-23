@@ -64,12 +64,31 @@ public class BaseConfig implements Config {
         this.redisConfig = redisConfig;
     }
 
+    @Override
     public GooglePubsubConfig getGooglePubsubConfig() {
         return googlePubsubConfig;
     }
 
     public void setGooglePubsubConfig(GooglePubsubConfig googlePubsubConfig) {
         this.googlePubsubConfig = googlePubsubConfig;
+    }
+
+    @Override
+    public int getClientLongPollingTimeout() {
+        return this.clientLongPollingTimeout;
+    }
+
+    public void setClientLongPollingTimeout(int clientLongPollingTimeout) {
+        this.clientLongPollingTimeout = clientLongPollingTimeout;
+    }
+
+    @Override
+    public MemoryConfig getMemoryConfig() {
+        return this.memoryConfig;
+    }
+
+    public void setMemoryConfig(MemoryConfig memoryConfig) {
+        this.memoryConfig = memoryConfig;
     }
 
     public List<String> validate() {
@@ -92,8 +111,14 @@ public class BaseConfig implements Config {
                     } else {
                         errors.addAll(this.googlePubsubConfig.validate());
                     }
+                    break;
                 case "memory":
-                    break; // no real configuration right now
+                    if (this.memoryConfig == null) {
+                        errors.add("must provide memory configuration");
+                    } else {
+                        errors.addAll(this.memoryConfig.validate());
+                    }
+                    break;
                 default:
                     errors.add(this.downstream + " is not a valid downstream provider");
             }
@@ -101,13 +126,17 @@ public class BaseConfig implements Config {
 
         errors.addAll(ConfigUtil.validateParameterGreaterThanZero(downstreamTimeout, "downstreamTimeout"));
         errors.addAll(ConfigUtil.validateParameterGreaterThanZero(upstreamTimeout, "upstreamTimeout"));
+        errors.addAll(ConfigUtil.validateParameterGreaterThanZero(clientLongPollingTimeout, "clientLongPollingTimeout"));
         return errors;
     }
 
     private List<String> topics;
+
+    private int clientLongPollingTimeout = 600;
     private int downstreamTimeout;
     private int upstreamTimeout;
     private String downstream;
     private RedisConfig redisConfig;
     private GooglePubsubConfig googlePubsubConfig;
+    private MemoryConfig memoryConfig;
 }
