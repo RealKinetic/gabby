@@ -37,11 +37,11 @@ public class MemoryMessage {
     }
 
     public long getTimestamp() {
-        return this.safe(false, () -> this.timestamp);
+        return this.timestamp;
     }
 
     public int getNumAccesses() {
-        return this.safe(false, () -> this.numAccesses);
+        return this.numAccesses;
     }
 
     public MemoryMessage() {
@@ -87,10 +87,7 @@ public class MemoryMessage {
     }
 
     public void touch() {
-        this.safe(true, () -> {
-           this.numAccesses++;
-           this.timestamp = System.currentTimeMillis();
-           return null;
-        });
+        this.timestamp = System.currentTimeMillis();
+        this.numAccesses++;
     }
 }

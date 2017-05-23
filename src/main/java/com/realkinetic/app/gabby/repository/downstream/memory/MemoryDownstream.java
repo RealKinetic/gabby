@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -39,21 +40,32 @@ public class MemoryDownstream implements DownstreamSubscription {
     private final Map<String, Set<String>> sets;
     private final Map<String, BlockingQueue<MemoryMessage>> queues;
     private final Map<String, PriorityBlockingQueue<MemoryMessage>> deadLetterQueues;
+    // this is a hack to assist unit testing... we need a way to tell this
+    // logic to evict an item from the deadletter queue even though that is
+    // based on timestamps by default.
+    private final Predicate<MemoryMessage> predicate;
 
     @Autowired
-    public MemoryDownstream(Config config) {
+    public MemoryDownstream(final Config config) {
+        this(config, mm ->
+            mm.getTimestamp() < System.currentTimeMillis() - config.getDownstreamTimeout() * 1000
+        );
+    }
+
+    public MemoryDownstream(Config config, final Predicate<MemoryMessage> predicate) {
         this.config = config;
         this.memoryConfig = config.getMemoryConfig();
         this.sets = new ConcurrentSkipListMap<>();
         this.queues = new ConcurrentSkipListMap<>();
         this.deadLetterQueues = new ConcurrentSkipListMap<>();
+        this.predicate = predicate;
 
         Observable.interval(
                 config.getDownstreamTimeout(),
                 config.getDownstreamTimeout(),
                 TimeUnit.SECONDS
-        ).subscribe($ -> {
-            this.vacuum();
+        ).retry(10).subscribe($ -> this.vacuum(), err -> {
+            LOG.severe(err.getMessage());
         });
     }
 
@@ -65,18 +77,15 @@ public class MemoryDownstream implements DownstreamSubscription {
         // mostly clear itself up on the next volume
         this.deadLetterQueues.forEach((subscriptionId, deadLetterQueue) -> {
             for (MemoryMessage message : deadLetterQueue) {
-                LOG.info("iterating dead letter queue");
-                if (message.getTimestamp() < System.currentTimeMillis() - this.config.getDownstreamTimeout() * 1000) {
+                if (this.predicate.test(message)) {
                     i.incrementAndGet();
                 } else {
                     break;
                 }
             }
 
-            LOG.info("checking i: " + i.get());
             if (i.get() > 0) { // we need to move some items over the queue
                 // first, collect them
-                LOG.info("i is greater than 0");
                 deadLetterQueue.drainTo(revived, i.get());
                 final BlockingQueue<MemoryMessage> queue = this.getQueue(subscriptionId);
                 // we do this because it is way more efficient to add items to the concurrent
@@ -93,8 +102,6 @@ public class MemoryDownstream implements DownstreamSubscription {
                         toRemove.add(mm.getMessage().getId());
                     }
                 }
-
-                LOG.info("TO ADD: " + toAdd.size());
 
                 queue.addAll(toAdd);
 
@@ -238,19 +245,16 @@ public class MemoryDownstream implements DownstreamSubscription {
         final BlockingQueue<MemoryMessage> deadLetterQueue = this.getDeadLetterQueue(subscriptionId);
         final MemoryMessage memoryMessage;
 
-        //LOG.info("about to block");
         if (returnImmediately) {
             memoryMessage = queue.poll();
         } else {
             memoryMessage = queue.poll(this.config.getClientLongPollingTimeout(), TimeUnit.SECONDS);
         }
-        //LOG.info("block complete: " + memoryMessage);
 
         if (memoryMessage != null) {
             deadLetterQueue.add(memoryMessage);
         }
 
-        LOG.info("function complete");
         return memoryMessage;
     }
 

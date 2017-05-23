@@ -18,7 +18,7 @@ public class MemoryDownstreamTest extends BaseDownstream {
         final MemoryConfig memoryConfig = new MemoryConfig();
         memoryConfig.setMaxAccesses(10);
         config.setMemoryConfig(memoryConfig);
-        return new MemoryDownstream(config);
+        return new MemoryDownstream(config, mm -> true);
     }
 
     @Override

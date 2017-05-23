@@ -1,21 +1,19 @@
 package com.realkinetic.app.gabby.repository;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.realkinetic.app.gabby.base.BaseObservableTest;
 import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.observers.TestObserver;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public abstract class BaseDownstream extends BaseObservableTest {
+    private static final Logger LOG = Logger.getLogger(BaseDownstream.class.getName());
     @SuppressWarnings("unchecked")
     protected <T> TestObserver getTestObserver() {
         return new TestObserver<T>();
@@ -189,7 +187,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
     }
 
     @Test
-    public void testPullDeadLetterMaxAccesses() {
+    public void testPullDeadLetterMaxAccesses() throws InterruptedException {
         DownstreamSubscription ds = this.getDownstream();
         String topic = IdUtil.generateId();
         this.createTopic(topic);
