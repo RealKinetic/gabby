@@ -14,6 +14,7 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.repository.downstream.redis;
 
+import com.google.api.client.util.Lists;
 import com.google.common.collect.Sets;
 import com.realkinetic.app.gabby.config.Config;
 import com.realkinetic.app.gabby.config.RedisConfig;
@@ -21,6 +22,7 @@ import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import com.realkinetic.app.gabby.util.IdUtil;
+import com.realkinetic.app.gabby.util.LambdaExceptionUtil;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import org.redisson.Redisson;
@@ -28,11 +30,13 @@ import org.redisson.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class RedisDownstream implements DownstreamSubscription {
     private static final Logger LOG = Logger.getLogger(RedisDownstream.class.getName());
@@ -128,29 +132,45 @@ public class RedisDownstream implements DownstreamSubscription {
         ).subscribeOn(Schedulers.io());
     }
 
-    private Observable<String> localPublish(final ClientMessage clientMessage) {
-        final String messageId = IdUtil.generateId();
-        final Message message = new Message(
-                clientMessage.getMessage(),
-                messageId,
-                clientMessage.getTopic(),
-                messageId
-        );
-        final Set<String> subscriptions = this.getSet(message.getTopic());
+    private Observable<List<String>> localPublish(final String topic,
+                                                  final Iterable<ClientMessage> clientMessages) {
+
+        final List<RedisMessage> redisMessages = StreamSupport
+                .stream(clientMessages.spliterator(), false)
+                .map(cm -> {
+                    final String messageId = IdUtil.generateId();
+                    return new RedisMessage(new Message(
+                            cm.getMessage(),
+                            messageId,
+                            topic,
+                            messageId
+                    ));
+                })
+                .collect(Collectors.toList());
+        final Set<String> subscriptions = this.getSet(topic);
         try {
             for (String subscription : subscriptions) {
-                this.getQueue(subscription).putFirst(new RedisMessage(message));
+                RBlockingDeque<RedisMessage> dq = this.getQueue(subscription);
+                // we don't guarantee ordering
+                for (RedisMessage rm : redisMessages) {
+                    dq.putFirst(rm);
+                }
             }
         } catch (Exception e) {
             return Observable.error(e);
         }
 
-        return Observable.just(message.getId());
+        return Observable.just(redisMessages.stream()
+                .map(rm -> rm.getMessage().getId())
+                .collect(Collectors.toList())
+        );
     }
 
     @Override
-    public Observable<String> publish(final ClientMessage message) {
-        return Observable.defer(() -> this.localPublish(message).retry(5))
+    public Observable<List<String>> publish(final String topic,
+                                            final Iterable<ClientMessage> messages) {
+
+        return Observable.defer(() -> this.localPublish(topic, messages).retry(5))
                 .subscribeOn(Schedulers.io());
     }
 

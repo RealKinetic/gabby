@@ -77,8 +77,8 @@ public class GooglePubsubDownstreamTest extends BaseDownstream {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(new ClientMessage(topic, "test"))
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(new ClientMessage("test")))
                 .subscribe(sobs);
 
         TestObserver<List<Message>> mobs = this.getTestObserver();

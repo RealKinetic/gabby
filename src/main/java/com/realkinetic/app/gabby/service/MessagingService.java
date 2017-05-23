@@ -28,7 +28,7 @@ public interface MessagingService {
     // returns the subscriptionid
     Observable<String> acknowledge(String subscriptionId, Iterable<String> ackIds);
     // returns message id
-    Observable<String> publish(ClientMessage message);
+    Observable<List<String>> publish(String topic, Iterable<ClientMessage> message);
     // this will be null in the case of a timeout, force client to resubscribe
     Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
 }

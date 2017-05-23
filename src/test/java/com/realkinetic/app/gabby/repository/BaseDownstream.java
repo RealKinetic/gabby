@@ -91,8 +91,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.pull(false, subscriptionId)
                 .subscribe(mobs);
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(new ClientMessage(topic, "test"))
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(new ClientMessage("test")))
                 .subscribe(sobs);
 
         this.advance();
@@ -103,7 +103,7 @@ public abstract class BaseDownstream extends BaseObservableTest {
         mobs.assertNoErrors();
 
         mobs.assertValue(msg -> msg.get(0).getMessage().equals("test"));
-        sobs.assertValue(messageId -> !messageId.isEmpty());
+        sobs.assertValue(messageIds -> !messageIds.isEmpty());
     }
 
     @Test
@@ -131,8 +131,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.pull(false, subscriptionId2)
                 .subscribe(mobs2);
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(new ClientMessage(topic, "test"))
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(new ClientMessage("test")))
                 .subscribe(sobs);
 
         this.advance();
@@ -159,8 +159,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(new ClientMessage(topic, "test"))
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(new ClientMessage("test")))
                 .subscribe(sobs);
 
         TestObserver<List<Message>> mobs = this.getTestObserver();
@@ -199,8 +199,8 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(new ClientMessage(topic, "test"))
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(new ClientMessage("test")))
                 .subscribe(sobs);
 
         this.advance();
@@ -234,10 +234,10 @@ public abstract class BaseDownstream extends BaseObservableTest {
         ds.subscribe(topic, subscriptionId).subscribe(obs);
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
-        ClientMessage msg = new ClientMessage(topic, "test");
+        ClientMessage msg = new ClientMessage("test");
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(msg)
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(msg))
                 .subscribe(sobs);
 
         TestObserver<List<Message>> mobs1 = this.getTestObserver();
@@ -280,10 +280,10 @@ public abstract class BaseDownstream extends BaseObservableTest {
         this.advance();
         obs.awaitDone(10, TimeUnit.SECONDS);
         obs.assertValue(subscriptionId);
-        ClientMessage msg = new ClientMessage(topic, "test");
+        ClientMessage msg = new ClientMessage("test");
 
-        TestObserver<String> sobs = this.getTestObserver();
-        ds.publish(msg)
+        TestObserver<List<String>> sobs = this.getTestObserver();
+        ds.publish(topic, Collections.singletonList(msg))
                 .subscribe(sobs);
 
         this.advance();

@@ -1,5 +1,7 @@
 package com.realkinetic.app.gabby.model.dto;
 
+import org.hibernate.validator.constraints.NotEmpty;
+
 public class ClientMessage {
     public String getMessage() {
         return message;
@@ -9,21 +11,12 @@ public class ClientMessage {
         this.message = message;
     }
 
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
+    @NotEmpty
     private String message;
-    private String topic;
 
     public ClientMessage() {}
 
-    public ClientMessage(final String topic, final String message) {
-        this.topic = topic;
+    public ClientMessage(final String message) {
         this.message = message;
     }
 }

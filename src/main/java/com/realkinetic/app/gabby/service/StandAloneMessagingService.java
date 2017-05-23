@@ -50,8 +50,9 @@ public class StandAloneMessagingService implements MessagingService {
     }
 
     @Override
-    public Observable<String> publish(final ClientMessage message) {
-        return this.downstreamSubscription.publish(message);
+    public Observable<List<String>> publish(final String topic,
+                                            final Iterable<ClientMessage> messages) {
+        return this.downstreamSubscription.publish(topic, messages);
     }
 
     @Override

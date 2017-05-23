@@ -18,6 +18,7 @@ import com.realkinetic.app.gabby.model.dto.ClientMessage;
 import com.realkinetic.app.gabby.model.dto.Message;
 import io.reactivex.Observable;
 
+import java.util.Iterator;
 import java.util.List;
 
 public interface DownstreamSubscription {
@@ -28,7 +29,7 @@ public interface DownstreamSubscription {
     // returns the subscriptionid
     Observable<String> acknowledge(String subscriptionId, Iterable<String> ackIds);
     // returns the message id
-    Observable<String> publish(ClientMessage message);
+    Observable<List<String>> publish(String topic, Iterable<ClientMessage> message);
     // this will be null in the case of a timeout, force client to resubscribe
     Observable<List<Message>> pull(boolean returnImmediately, String subscriptionId);
     // returns a list of subscription ids for the provided topic
