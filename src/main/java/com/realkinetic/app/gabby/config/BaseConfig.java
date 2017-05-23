@@ -111,12 +111,14 @@ public class BaseConfig implements Config {
                     } else {
                         errors.addAll(this.googlePubsubConfig.validate());
                     }
+                    break;
                 case "memory":
                     if (this.memoryConfig == null) {
                         errors.add("must provide memory configuration");
                     } else {
                         errors.addAll(this.memoryConfig.validate());
                     }
+                    break;
                 default:
                     errors.add(this.downstream + " is not a valid downstream provider");
             }

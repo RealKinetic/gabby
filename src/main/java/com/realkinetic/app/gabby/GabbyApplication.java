@@ -51,6 +51,7 @@ public class GabbyApplication {
     @Bean
     public DownstreamSubscription downstreamSubscription() throws IOException, InvalidConfigurationException {
         final Config config = this.config();
+        LOG.info(String.format("running with %s downstream provider", config.getDownstream()));
         switch (config.getDownstream()) {
             case "redis":
                 return new RedisDownstream(config);

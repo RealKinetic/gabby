@@ -2,7 +2,7 @@ topics:
   - test
 downstreamTimeout: 90
 upstreamTimeout: 180
-downstream: googlepubsub
+downstream: memory
 redisConfig:
   hosts:
     - "127.0.0.1:6379"
