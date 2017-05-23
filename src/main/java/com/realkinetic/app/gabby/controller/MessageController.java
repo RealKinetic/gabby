@@ -33,6 +33,7 @@ import java.util.logging.Logger;
 
 @RestController
 public class MessageController {
+    private static final long CLIENT_TIMEOUT = 30 * 1000; // timeout time in milliseconds, ie, 30 seconds
     private static Logger log = Logger.getLogger(MessageController.class.getName());
     private final MessagingService messagingService;
 
@@ -43,7 +44,7 @@ public class MessageController {
 
     @RequestMapping(value = "/subscriptions", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity<String>> createSubscription(@Valid @RequestBody CreateSubscriptionRequest request) throws IOException {
-        DeferredResult<ResponseEntity<String>> dr = new DeferredResult<>(30L);
+        DeferredResult<ResponseEntity<String>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
         this.messagingService.subscribe(request.getTopic(), request.getSubscriptionId()).subscribe($ -> {
             dr.setResult(ResponseEntity.ok(request.getSubscriptionId()));
         });
@@ -52,7 +53,7 @@ public class MessageController {
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}", method = RequestMethod.DELETE)
     public DeferredResult<ResponseEntity.BodyBuilder> deleteSubscription(@PathVariable String subscriptionId) throws IOException {
-        DeferredResult<ResponseEntity.BodyBuilder> dr = new DeferredResult<>(30L);
+        DeferredResult<ResponseEntity.BodyBuilder> dr = new DeferredResult<>(CLIENT_TIMEOUT);
         this.messagingService.unsubscribe(subscriptionId).subscribe($ -> {
             dr.setResult(ResponseEntity.ok());
         });
@@ -72,7 +73,7 @@ public class MessageController {
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}/ack", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity<Iterable<String>>> acknowledge(@PathVariable String subscriptionId, @RequestBody AcknowledgeMessagesRequest ack) throws IOException {
-        DeferredResult<ResponseEntity<Iterable<String>>> dr = new DeferredResult<>(30L);
+        DeferredResult<ResponseEntity<Iterable<String>>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
         this.messagingService.acknowledge(subscriptionId, ack.getAckIds()).subscribe($ -> {
            dr.setResult(ResponseEntity.ok(ack.getAckIds()));
         });
@@ -83,7 +84,7 @@ public class MessageController {
     public DeferredResult<ResponseEntity<String>> send(@PathVariable final String topicId, @RequestBody final CreateMessageRequest msg) throws IOException {
         String messageId = IdUtil.generateId();
         Message message = new Message(msg.getMessage(), IdUtil.generateId(), topicId, messageId);
-        DeferredResult<ResponseEntity<String>> dr = new DeferredResult<>(30L);
+        DeferredResult<ResponseEntity<String>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
         this.messagingService.publish(message).subscribe($ -> {
             dr.setResult(ResponseEntity.ok(messageId));
         });
