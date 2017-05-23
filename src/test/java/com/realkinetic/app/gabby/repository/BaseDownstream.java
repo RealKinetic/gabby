@@ -210,7 +210,11 @@ public abstract class BaseDownstream extends BaseObservableTest {
 
         for (int i = 0; i <= 10; i++) { // need to change this
             TestObserver<List<Message>> mobs = this.getTestObserver();
-            ds.pull(true, subscriptionId).subscribe(mobs);
+            if (i < 10){
+                ds.pull(false, subscriptionId).subscribe(mobs);
+            } else {
+                ds.pull(true, subscriptionId).subscribe(mobs);
+            }
 
             this.advance();
             mobs.awaitDone(10, TimeUnit.SECONDS);

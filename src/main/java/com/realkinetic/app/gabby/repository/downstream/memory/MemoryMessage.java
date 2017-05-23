@@ -16,10 +16,17 @@ package com.realkinetic.app.gabby.repository.downstream.memory;
 
 import com.realkinetic.app.gabby.model.dto.Message;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+
 public class MemoryMessage {
     private Message message;
     private long timestamp;
     private int numAccesses;
+    private ReadWriteLock lock;
 
     public Message getMessage() {
         return message;
@@ -30,19 +37,11 @@ public class MemoryMessage {
     }
 
     public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(final long timestamp) {
-        this.timestamp = timestamp;
+        return this.safe(false, () -> this.timestamp);
     }
 
     public int getNumAccesses() {
-        return numAccesses;
-    }
-
-    public void setNumAccesses(final int numAccesses) {
-        this.numAccesses = numAccesses;
+        return this.safe(false, () -> this.numAccesses);
     }
 
     public MemoryMessage() {
@@ -53,6 +52,28 @@ public class MemoryMessage {
         this.message = message;
         this.timestamp = System.currentTimeMillis();
         this.numAccesses = 0;
+        this.lock = new ReentrantReadWriteLock();
+    }
+
+    private <T> T safe(final boolean exclusive, final Callable<T> fn) {
+        if (exclusive) {
+            this.lock.writeLock().lock();
+        } else {
+            this.lock.readLock().lock();
+        }
+
+        try {
+            return fn.call();
+        } catch (Exception e) {
+            // can't really be thrown
+            return null;
+        } finally {
+            if (exclusive) {
+                this.lock.writeLock().unlock();
+            } else {
+                this.lock.readLock().unlock();
+            }
+        }
     }
 
     /*
@@ -66,7 +87,10 @@ public class MemoryMessage {
     }
 
     public void touch() {
-        this.timestamp = System.currentTimeMillis();
-        this.numAccesses++;
+        this.safe(true, () -> {
+           this.numAccesses++;
+           this.timestamp = System.currentTimeMillis();
+           return null;
+        });
     }
 }

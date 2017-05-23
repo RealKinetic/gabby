@@ -130,7 +130,7 @@ public class BaseConfig implements Config {
 
     private List<String> topics;
 
-    private int clientLongPollingTimeout;
+    private int clientLongPollingTimeout = 600;
     private int downstreamTimeout;
     private int upstreamTimeout;
     private String downstream;

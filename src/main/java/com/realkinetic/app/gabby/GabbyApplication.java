@@ -19,7 +19,7 @@ import com.realkinetic.app.gabby.config.YamlConfig;
 import com.realkinetic.app.gabby.model.error.InvalidConfigurationException;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import com.realkinetic.app.gabby.repository.downstream.google.pubsub.GooglePubsubDownstream;
-import com.realkinetic.app.gabby.repository.downstream.memory.MemoryDownstreamSubscription;
+import com.realkinetic.app.gabby.repository.downstream.memory.MemoryDownstream;
 import com.realkinetic.app.gabby.repository.downstream.redis.RedisDownstream;
 import com.realkinetic.app.gabby.service.MessagingService;
 import com.realkinetic.app.gabby.service.StandAloneMessagingService;
@@ -56,6 +56,8 @@ public class GabbyApplication {
                 return new RedisDownstream(config);
             case "googlepubsub":
                 return new GooglePubsubDownstream(config);
+            case "memory":
+                return new MemoryDownstream(config);
             default:
                 throw new InvalidConfigurationException(Collections.singletonList(config.getDownstream() + " not recognized"));
         }

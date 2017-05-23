@@ -27,25 +27,85 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-public class MemoryDownstreamSubscription implements DownstreamSubscription {
-    private static final Logger LOG = Logger.getLogger(MemoryDownstreamSubscription.class.getName());
+public class MemoryDownstream implements DownstreamSubscription {
+    private static final Logger LOG = Logger.getLogger(MemoryDownstream.class.getName());
     private final Config config;
     private final MemoryConfig memoryConfig;
     private final Map<String, Set<String>> sets;
     private final Map<String, BlockingQueue<MemoryMessage>> queues;
-    private final Map<String, BlockingQueue<MemoryMessage>> deadLetterQueues;
+    private final Map<String, PriorityBlockingQueue<MemoryMessage>> deadLetterQueues;
 
     @Autowired
-    public MemoryDownstreamSubscription(Config config) {
+    public MemoryDownstream(Config config) {
         this.config = config;
         this.memoryConfig = config.getMemoryConfig();
         this.sets = new ConcurrentSkipListMap<>();
         this.queues = new ConcurrentSkipListMap<>();
         this.deadLetterQueues = new ConcurrentSkipListMap<>();
+
+        Observable.interval(
+                config.getDownstreamTimeout(),
+                config.getDownstreamTimeout(),
+                TimeUnit.SECONDS
+        ).subscribe($ -> {
+            this.vacuum();
+        });
+    }
+
+    private void vacuum() {
+        final List<MemoryMessage> revived = new ArrayList<>(10);
+        final AtomicInteger i = new AtomicInteger(0); // tells us how many to take
+        // what we need to do is determine how many items from the front of the queue
+        // we need to pull... this doesn't guarantee we get them all, but this should
+        // mostly clear itself up on the next volume
+        this.deadLetterQueues.forEach((subscriptionId, deadLetterQueue) -> {
+            for (MemoryMessage message : deadLetterQueue) {
+                LOG.info("iterating dead letter queue");
+                if (message.getTimestamp() < System.currentTimeMillis() - this.config.getDownstreamTimeout() * 1000) {
+                    i.incrementAndGet();
+                } else {
+                    break;
+                }
+            }
+
+            LOG.info("checking i: " + i.get());
+            if (i.get() > 0) { // we need to move some items over the queue
+                // first, collect them
+                LOG.info("i is greater than 0");
+                deadLetterQueue.drainTo(revived, i.get());
+                final BlockingQueue<MemoryMessage> queue = this.getQueue(subscriptionId);
+                // we do this because it is way more efficient to add items to the concurrent
+                // queue all at once
+                final LinkedList<MemoryMessage> toAdd = new LinkedList<>();
+                // a list of yo-yoing messages, we're going to just acknowlege
+                final LinkedList<String> toRemove = new LinkedList<>();
+
+                for (MemoryMessage mm : revived) {
+                    if (mm.getNumAccesses() < this.memoryConfig.getMaxAccesses() - 1) {
+                        mm.touch();
+                        toAdd.addFirst(mm);
+                    } else {
+                        toRemove.add(mm.getMessage().getId());
+                    }
+                }
+
+                LOG.info("TO ADD: " + toAdd.size());
+
+                queue.addAll(toAdd);
+
+                if (toRemove.size() > 0) {
+                    this.acknowledge(subscriptionId, toRemove).subscribe();
+                }
+            }
+
+            i.set(0); // reset i to 0
+            revived.clear(); // remove old elements
+        });
     }
 
     private Set<String> getSet(String key) {
@@ -56,8 +116,15 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         return this.queues.computeIfAbsent(key, k -> new LinkedBlockingQueue<>());
     }
 
-    private BlockingQueue<MemoryMessage> getDeadLetterQueue(String key) {
-        return this.deadLetterQueues.computeIfAbsent(key, k -> new LinkedBlockingQueue<>());
+    private PriorityBlockingQueue<MemoryMessage> getDeadLetterQueue(String key) {
+        return this.deadLetterQueues.computeIfAbsent(key, k -> new PriorityBlockingQueue<MemoryMessage>(10000, (m1, m2) -> {
+            if (m1.getTimestamp() < m2.getTimestamp()) {
+                return -1;
+            } else if (m2.getTimestamp() < m1.getTimestamp()) {
+                return 1;
+            }
+            return 0;
+        }));
     }
 
     private void deleteSubscription(final String subscriptionId) {
@@ -171,40 +238,19 @@ public class MemoryDownstreamSubscription implements DownstreamSubscription {
         final BlockingQueue<MemoryMessage> deadLetterQueue = this.getDeadLetterQueue(subscriptionId);
         final MemoryMessage memoryMessage;
 
+        //LOG.info("about to block");
         if (returnImmediately) {
             memoryMessage = queue.poll();
         } else {
             memoryMessage = queue.poll(this.config.getClientLongPollingTimeout(), TimeUnit.SECONDS);
         }
+        //LOG.info("block complete: " + memoryMessage);
 
         if (memoryMessage != null) {
             deadLetterQueue.add(memoryMessage);
-
-            Observable.timer(this.config.getDownstreamTimeout(), TimeUnit.SECONDS)
-                    .subscribe($ -> {
-                        MemoryMessage last = deadLetterQueue.peek();
-                        while (last != null && last.getTimestamp() < System.currentTimeMillis() - this.config.getDownstreamTimeout() * 1000) {
-                            // if valid, we're going to move the deadletter to the main queue
-                            // if not, mark the message as acknowledged
-                            // ensure we add to the main queue before deleting from deadletter
-                            if (last.getNumAccesses() < this.memoryConfig.getMaxAccesses() - 1) {
-                                MemoryMessage copy = new MemoryMessage(last);
-                                last.touch();
-                                queue.add(last);
-                                last = copy; // ensures remove works properly
-                            } else {
-                                this.acknowledge(
-                                        subscriptionId,
-                                        Collections.singleton(last.getMessage().getId())
-                                ).subscribe();
-                            }
-
-                            deadLetterQueue.remove(last);
-                            last = deadLetterQueue.peek();
-                        }
-                    });
         }
 
+        LOG.info("function complete");
         return memoryMessage;
     }
 

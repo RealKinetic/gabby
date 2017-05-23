@@ -11,3 +11,5 @@ redisConfig:
 googlePubsubConfig:
   project: "static-files-rk"
   appName: "gabby"
+memoryConfig:
+  maxAccesses: 10

@@ -14,6 +14,7 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.controller;
 
+import com.realkinetic.app.gabby.config.Config;
 import com.realkinetic.app.gabby.model.dto.*;
 import com.realkinetic.app.gabby.service.MessagingService;
 import com.realkinetic.app.gabby.util.IdUtil;
@@ -34,10 +35,12 @@ public class MessageController {
     private static final long CLIENT_TIMEOUT = 30 * 1000; // timeout time in milliseconds, ie, 30 seconds
     private static Logger LOG = Logger.getLogger(MessageController.class.getName());
     private final MessagingService messagingService;
+    private final Config config;
 
     @Autowired
-    public MessageController(MessagingService messagingService) {
+    public MessageController(MessagingService messagingService, Config config) {
         this.messagingService = messagingService;
+        this.config = config;
     }
 
     @RequestMapping(value = "/subscriptions", method = RequestMethod.POST)
@@ -60,7 +63,8 @@ public class MessageController {
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}/messages", method = RequestMethod.GET)
     public DeferredResult<ResponseEntity<Iterable<Message>>> pull(@PathVariable String subscriptionId) throws IOException {
-        DeferredResult<ResponseEntity<Iterable<Message>>> dr = new DeferredResult<>();
+        DeferredResult<ResponseEntity<Iterable<Message>>> dr
+                = new DeferredResult<>((long) this.config.getClientLongPollingTimeout() * 1000);
         this.messagingService.pull(false, subscriptionId).subscribe(messages -> {
             dr.setResult(ResponseEntity.ok(messages));
         });

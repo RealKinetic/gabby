@@ -14,11 +14,11 @@ public class MemoryDownstreamTest extends BaseDownstream {
     @Override
     protected DownstreamSubscription getDownstream() {
         final BaseConfig config = (BaseConfig) DefaultConfig.load();
-        config.setDownstreamTimeout(0);
+        config.setDownstreamTimeout(1);
         final MemoryConfig memoryConfig = new MemoryConfig();
         memoryConfig.setMaxAccesses(10);
         config.setMemoryConfig(memoryConfig);
-        return new MemoryDownstreamSubscription(config);
+        return new MemoryDownstream(config);
     }
 
     @Override
