@@ -15,7 +15,6 @@ specific language governing permissions and limitations under the License.
 package com.realkinetic.app.gabby.repository.downstream.memory;
 
 import com.realkinetic.app.gabby.model.dto.Message;
-import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
@@ -43,8 +42,8 @@ public class MessageBroker {
 
     private final String topic;
     private final String subscriptionId;
-    private final BlockingQueue<PrivateMessage> messages;
-    private final Map<String, PrivateMessage> deadLetterQueue;
+    private final BlockingQueue<MemoryMessage> messages;
+    private final Map<String, MemoryMessage> deadLetterQueue;
     private final Subject<List<Message>> disposedObs;
     private final AtomicBoolean isDisposed;
     private final Map<String, Disposable> disposables;
@@ -62,7 +61,7 @@ public class MessageBroker {
     public void push(final Message message) {
         // if this is disposed or full we don't really care and we'll pretend
         // to add
-        PrivateMessage pm = new PrivateMessage(message);
+        MemoryMessage pm = new MemoryMessage(message);
         this.messages.offer(pm);
     }
 
@@ -73,7 +72,7 @@ public class MessageBroker {
             if (this.isDisposed.get()) {
                 return Observable.just(Collections.<Message>emptyList());
             }
-            PrivateMessage msg = this.messages.poll(TIMEOUT, TimeUnit.SECONDS);
+            MemoryMessage msg = this.messages.poll(TIMEOUT, TimeUnit.SECONDS);
             if (msg == null) { // did not hit the timeout
                 return Observable.just(Collections.<Message>emptyList());
             }
