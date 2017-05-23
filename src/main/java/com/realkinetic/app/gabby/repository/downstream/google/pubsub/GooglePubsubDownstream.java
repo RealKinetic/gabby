@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.collect.Lists.newArrayList;
 
@@ -116,23 +117,26 @@ public class GooglePubsubDownstream implements DownstreamSubscription {
     }
 
     @Override
-    public Observable<String> publish(final ClientMessage message) {
+    public Observable<List<String>> publish(final String topic,
+                                            final Iterable<ClientMessage> messages) {
+
         return Observable.defer(() -> {
             final String qTopic = getFullyQualifiedResourceName(
                     ResourceType.TOPIC,
                     this.pubsubConfig.getProject(),
-                    message.getTopic()
+                    topic
             );
-            final PubsubMessage pubsubMessage = new PubsubMessage()
-                    .encodeData(message.getMessage().getBytes("UTF-8"));
-            final List<PubsubMessage> messages = ImmutableList.of(pubsubMessage);
+            final List<PubsubMessage> pubsubMessages = new ArrayList<>(10);
+            for (ClientMessage clientMessage : messages) {
+                pubsubMessages.add(new PubsubMessage().encodeData(clientMessage.getMessage().getBytes("UTF-8")));
+            }
             final PublishRequest publishRequest = new PublishRequest();
-            publishRequest.setMessages(messages);
+            publishRequest.setMessages(pubsubMessages);
             final PublishResponse publishResponse = this.pubsub.projects()
                     .topics()
                     .publish(qTopic, publishRequest)
                     .execute();
-            return Observable.just(publishResponse.getMessageIds().get(0));
+            return Observable.just(publishResponse.getMessageIds());
         }).subscribeOn(Schedulers.io());
     }
 

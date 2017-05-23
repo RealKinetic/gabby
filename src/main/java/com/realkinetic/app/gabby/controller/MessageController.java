@@ -14,10 +14,7 @@ specific language governing permissions and limitations under the License.
 */
 package com.realkinetic.app.gabby.controller;
 
-import com.realkinetic.app.gabby.model.dto.Message;
-import com.realkinetic.app.gabby.model.dto.AcknowledgeMessagesRequest;
-import com.realkinetic.app.gabby.model.dto.CreateMessageRequest;
-import com.realkinetic.app.gabby.model.dto.CreateSubscriptionRequest;
+import com.realkinetic.app.gabby.model.dto.*;
 import com.realkinetic.app.gabby.service.MessagingService;
 import com.realkinetic.app.gabby.util.IdUtil;
 import io.reactivex.Observable;
@@ -29,12 +26,13 @@ import org.springframework.web.context.request.async.DeferredResult;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Logger;
 
 @RestController
 public class MessageController {
     private static final long CLIENT_TIMEOUT = 30 * 1000; // timeout time in milliseconds, ie, 30 seconds
-    private static Logger log = Logger.getLogger(MessageController.class.getName());
+    private static Logger LOG = Logger.getLogger(MessageController.class.getName());
     private final MessagingService messagingService;
 
     @Autowired
@@ -62,17 +60,17 @@ public class MessageController {
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}/messages", method = RequestMethod.GET)
     public DeferredResult<ResponseEntity<Iterable<Message>>> pull(@PathVariable String subscriptionId) throws IOException {
-        log.info("starting pull");
         DeferredResult<ResponseEntity<Iterable<Message>>> dr = new DeferredResult<>();
         this.messagingService.pull(false, subscriptionId).subscribe(messages -> {
             dr.setResult(ResponseEntity.ok(messages));
         });
-        log.info("returning poll"); // prove this is thread is being returned to the spring pool
         return dr;
     }
 
     @RequestMapping(value = "/subscriptions/{subscriptionId}/ack", method = RequestMethod.POST)
-    public DeferredResult<ResponseEntity<Iterable<String>>> acknowledge(@PathVariable String subscriptionId, @RequestBody AcknowledgeMessagesRequest ack) throws IOException {
+    public DeferredResult<ResponseEntity<Iterable<String>>> acknowledge(@PathVariable String subscriptionId,
+                                                                        @RequestBody AcknowledgeMessagesRequest ack) throws IOException {
+
         DeferredResult<ResponseEntity<Iterable<String>>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
         this.messagingService.acknowledge(subscriptionId, ack.getAckIds()).subscribe($ -> {
            dr.setResult(ResponseEntity.ok(ack.getAckIds()));
@@ -81,12 +79,12 @@ public class MessageController {
     }
 
     @RequestMapping(value = "/topics/{topicId}/messages", method = RequestMethod.POST)
-    public DeferredResult<ResponseEntity<String>> send(@PathVariable final String topicId, @RequestBody final CreateMessageRequest msg) throws IOException {
-        String messageId = IdUtil.generateId();
-        Message message = new Message(msg.getMessage(), IdUtil.generateId(), topicId, messageId);
-        DeferredResult<ResponseEntity<String>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
-        this.messagingService.publish(message).subscribe($ -> {
-            dr.setResult(ResponseEntity.ok(messageId));
+    public DeferredResult<ResponseEntity<List<String>>> send(@PathVariable final String topicId,
+                                                             @RequestBody final List<ClientMessage> messages) throws IOException {
+
+        DeferredResult<ResponseEntity<List<String>>> dr = new DeferredResult<>(CLIENT_TIMEOUT);
+        this.messagingService.publish(topicId, messages).subscribe(messageIds -> {
+            dr.setResult(ResponseEntity.ok(messageIds));
         });
         return dr;
     }

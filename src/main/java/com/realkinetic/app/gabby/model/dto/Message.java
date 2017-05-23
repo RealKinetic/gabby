@@ -21,8 +21,11 @@ public class Message extends ClientMessage {
 
     public String getId() { return id; }
 
+    public String getTopic() { return this.topic; }
+
     private String ackId;
     private String id;
+    private String topic;
 
     public Message() {}
 
@@ -34,7 +37,8 @@ public class Message extends ClientMessage {
                    final String ackId,
                    final String topic,
                    final String id) {
-        super(topic, message);
+        super(message);
+        this.topic = topic;
         this.ackId = ackId;
         this.id = id;
     }
