@@ -1,15 +1,18 @@
 package com.realkinetic.app.gabby.repository.downstream.redis;
 
+import com.realkinetic.app.gabby.base.IntegrationTest;
 import com.realkinetic.app.gabby.config.BaseConfig;
 import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.RedisConfig;
 import com.realkinetic.app.gabby.repository.BaseDownstream;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 
 import java.util.Collections;
 import java.util.logging.Logger;
 
+@Category(IntegrationTest.class)
 public class RedisDownstreamTest extends BaseDownstream {
     private static final Logger LOG = Logger.getLogger(RedisDownstreamTest.class.getName());
     private static RedisDownstream redisDownstream;
