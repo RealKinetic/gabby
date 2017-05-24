@@ -27,9 +27,4 @@ public class MemoryDownstreamTest extends BaseDownstream {
     protected void createTopic(String topic) {
         // just like redis, this simply doesn't matter
     }
-
-    @Test
-    public void testFail() {
-        Assert.fail();
-    }
 }
