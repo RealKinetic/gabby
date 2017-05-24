@@ -5,8 +5,6 @@ import com.realkinetic.app.gabby.config.DefaultConfig;
 import com.realkinetic.app.gabby.config.MemoryConfig;
 import com.realkinetic.app.gabby.repository.BaseDownstream;
 import com.realkinetic.app.gabby.repository.DownstreamSubscription;
-import org.junit.Assert;
-import org.junit.Test;
 
 import java.util.logging.Logger;
 
